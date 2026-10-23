@@ -1,0 +1,18 @@
+# never commit secrets
+wallet*.txt
+*.key
+*.pem
+.env
+*.env
+.keeper.env
+ops/
+keeper-state.json
+# build output
+node_modules/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
+season2/contracts/out/
+season2/contracts/cache/
+shots/

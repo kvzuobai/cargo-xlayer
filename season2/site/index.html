@@ -1,0 +1,1051 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cargo</title>
+<!-- Cargo site (s41, Voyage / CargoMiner v2; v1 page in index.v1.html.bak). Addresses: cargo-addresses.json next to this page.
+     ?rpc=<url> overrides the read RPC; on a localhost RPC with no browser wallet, writes use the node's unlocked account ?acct=N (anvil test only). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0a;--pn:#111111;--pn2:#161616;--ln:#2a2a2a;--ln2:#3a3a3a;--fg:#e8e6e1;--mu:#8a8780;--ac:#ff4f00;--ok:#3ddc84;--bad:#ff3b30;
+ --mono:"IBM Plex Mono",ui-monospace,Consolas,"Noto Sans SC",monospace;--cond:"Barlow Condensed","Noto Sans SC",sans-serif}
+:root[data-theme="light"]{--bg:#e9e7e1;--pn:#f3f2ee;--pn2:#e2e0d9;--ln:#c9c6bd;--ln2:#a9a59a;--fg:#111111;--mu:#5f5c55}
+*{box-sizing:border-box;border-radius:0}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font:13px/1.45 var(--mono);-webkit-font-smoothing:antialiased}
+.w{max-width:1240px;margin:0 auto;padding:0 16px 40px}
+[hidden]{display:none!important}
+button{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;background:var(--fg);color:var(--bg);border:1px solid var(--fg);padding:0 14px;height:36px;cursor:pointer}
+button:hover{background:var(--ac);border-color:var(--ac);color:#000}
+button.o{background:transparent;color:var(--fg);border-color:var(--ln2)}button.o:hover{border-color:var(--ac);color:var(--ac);background:transparent}
+button.x{height:30px;padding:0 10px;font-size:11px}
+button:disabled{opacity:.35;cursor:not-allowed}button:disabled:hover{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+button.o:disabled:hover{background:transparent;border-color:var(--ln2);color:var(--fg)}
+button:focus-visible,input:focus-visible,select:focus-visible,nav a:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+
+/* top bar */
+.top{display:flex;align-items:stretch;border-bottom:1px solid var(--ln);height:56px}
+.brand{display:flex;align-items:center;gap:10px;padding-right:18px;border-right:1px solid var(--ln);margin-right:auto}
+.mk{width:28px;height:20px;border:2px solid var(--ac);position:relative}
+.mk:before{content:"";position:absolute;inset:3px 4px;background:repeating-linear-gradient(90deg,var(--ac) 0 2px,transparent 2px 5px)}
+.brand b{font:700 24px/1 var(--cond);letter-spacing:.12em}
+nav{display:flex}
+nav a{display:flex;align-items:center;gap:7px;padding:0 12px;border-right:1px solid var(--ln);color:var(--mu);text-decoration:none;font:600 15px var(--cond);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+nav a i{font:500 11px var(--mono);font-style:normal;color:var(--ln2)}
+nav a.on{color:var(--fg);box-shadow:inset 0 -3px 0 var(--ac)}nav a.on i{color:var(--ac)}
+nav a:hover{color:var(--fg)}
+.tools{display:flex;align-items:center;gap:8px;padding-left:14px}
+
+/* status strip + voyage line */
+.strip{display:flex;flex-wrap:wrap;font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
+.strip span{padding:8px 14px 8px 0;margin-right:14px;border-right:1px solid var(--ln)}.strip span:last-child{border-right:0}
+.strip b{color:var(--fg);font-weight:500;font-variant-numeric:tabular-nums}.strip .live b{color:var(--ok)}.strip .vc b{color:var(--ac)}
+.vline{height:2px;background:var(--ln)}.vline span{display:block;height:100%;width:0;background:var(--ac)}
+
+/* sections */
+.sec{margin-top:28px}
+.sh{display:flex;align-items:baseline;gap:14px;border-bottom:2px solid var(--fg);padding-bottom:6px}
+.sh i{font:600 12px var(--mono);font-style:normal;color:var(--ac)}
+.sh h2{margin:0;font:700 26px/1 var(--cond);letter-spacing:.06em;text-transform:uppercase}
+.sh p{margin:0 0 0 auto;color:var(--mu);font-size:11px;text-align:right;max-width:52ch}
+.adv>summary{cursor:pointer;list-style:none;border-bottom-color:var(--ln2)}.adv>summary::-webkit-details-marker{display:none}.adv[open]>summary{border-bottom-color:var(--fg)}
+.adv>summary h2{font-size:20px;color:var(--mu)}.adv[open]>summary h2,.adv>summary:hover h2{color:var(--fg)}
+.adv .tg2{flex:none;width:28px;height:28px;margin-left:12px;border:1px solid var(--ln2);display:flex;align-items:center;justify-content:center;font:600 16px var(--mono);color:var(--mu);align-self:center}
+.adv .tg2::before{content:"+"}.adv[open] .tg2::before{content:"−"}.adv>summary:focus-visible{outline:1px solid var(--ac);outline-offset:4px}
+.cols{display:grid;grid-template-columns:2fr 1fr;gap:0 24px}
+
+/* manifest cells */
+.cells{display:grid;grid-template-columns:repeat(4,1fr);border-left:1px solid var(--ln)}
+.cell{border-right:1px solid var(--ln);border-bottom:1px solid var(--ln);padding:12px 14px 14px;min-width:0}
+.cell small{display:flex;justify-content:space-between;color:var(--mu);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.cell small em{font-style:normal;color:var(--ln2)}
+.cell b{display:block;margin-top:10px;font:600 30px/1 var(--cond);letter-spacing:.02em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.cell b u{text-decoration:none;font:500 12px var(--mono);color:var(--mu);margin-left:6px}
+.cell.k{background:var(--pn)}.cell.k b{color:var(--ac)}
+.cell s{display:block;text-decoration:none;color:var(--mu);font-size:11px;margin-top:6px}
+
+/* gauges */
+.gauge{border:1px solid var(--ln);border-top:0;padding:12px 14px}
+.gauge .t{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
+.gauge .t b{color:var(--fg);font-weight:500;font-variant-numeric:tabular-nums}
+.track{position:relative;height:18px;border:1px solid var(--ln2);margin:8px 0 4px;background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 1px),var(--ln) calc(10% - 1px) 10%)}
+.track span{position:absolute;left:0;top:0;bottom:0;background:var(--ac)}
+
+/* tables */
+table{width:100%;border-collapse:collapse}
+th{font:500 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mu);text-align:left;padding:10px 12px 8px;border-bottom:1px solid var(--ln)}
+td{padding:12px;border-bottom:1px solid var(--ln);vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.m{vertical-align:middle}
+#keep td:first-child{overflow-wrap:anywhere}
+a.brand{color:inherit;text-decoration:none}nav{scrollbar-width:none}nav::-webkit-scrollbar{display:none}
+td .ttl{font:600 17px/1.1 var(--cond);letter-spacing:.04em;text-transform:uppercase}
+td .sub,.sub{color:var(--mu);font-size:11px;margin-top:3px}
+.tw{overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--ln2) transparent}.tw::-webkit-scrollbar{height:4px}.tw::-webkit-scrollbar-thumb{background:var(--ln2)}.tw::-webkit-scrollbar-track{background:transparent}
+.split{display:flex;height:16px;border:1px solid var(--ln2);margin-bottom:8px}
+.split span{height:100%;border-right:1px solid var(--bg)}.split span:last-child{border-right:0}
+.key{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:11px;color:var(--mu)}
+.key span{display:inline-flex;align-items:center;gap:6px}.key b{width:10px;height:10px;display:inline-block}
+.key em{font-style:normal;color:var(--fg)}
+.c-team{background:var(--mu)}.c-res{background:var(--fg)}.c-bem{background:repeating-linear-gradient(135deg,#4c8dff 0 3px,#1d3a6e 3px 6px)}
+.c-cargo{background:repeating-linear-gradient(135deg,var(--ac) 0 3px,#6b2200 3px 6px)}.c-burn{background:var(--bad)}.c-rigs{background:var(--ok)}
+.tot{font:600 22px/1 var(--cond)}.tot u{text-decoration:none;font:500 11px var(--mono);color:var(--mu);margin-left:4px}
+.kc{font-weight:600;color:var(--fg)}.kc i{font-style:normal;color:var(--mu);font-weight:400}
+.due{color:var(--ac)}.idle{color:var(--mu)}.okc{color:var(--ok)}.badc{color:var(--bad)}
+.tg{display:inline-block;font:600 9px/1.4 var(--mono);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--ln2);color:var(--mu);padding:0 4px;vertical-align:middle}
+.tg.c{border-color:var(--ac);color:var(--ac)}
+
+/* steps + forms */
+.step{display:grid;grid-template-columns:64px 1fr;border-bottom:1px solid var(--ln)}
+.step>i{font:700 34px/1 var(--cond);font-style:normal;color:var(--ln2);padding:16px 0 0 2px}
+.step.cur>i{color:var(--ac)}
+.step>div{padding:16px 0;min-width:0}
+.step h3{margin:0;font:600 20px/1.1 var(--cond);letter-spacing:.05em;text-transform:uppercase}
+.step p{margin:4px 0 12px;color:var(--mu);font-size:12px;max-width:62ch}
+.fr{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}
+input,select{background:var(--bg);color:var(--fg);border:1px solid var(--ln2);height:36px;padding:0 10px;font:500 14px var(--mono);width:160px;outline:none;max-width:100%}
+input.wide{width:330px}select{width:220px}
+input:focus,select:focus{border-color:var(--ac)}
+.rd{font-size:12px;color:var(--mu);margin-top:10px}.rd b{color:var(--fg);font-weight:500}
+.side{border:1px solid var(--ln);border-top:0}
+.side .r{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--ln);font-size:12px}
+.side .r:last-child{border-bottom:0}.side .r span{color:var(--mu);text-transform:uppercase;font-size:10px;letter-spacing:.08em}
+.side .r b{font-weight:500;text-align:right;overflow-wrap:anywhere}
+
+/* voyage panel */
+/* the scene stays dark in both themes (it is a window onto the sea), so overlay text uses fixed light colors */
+.vy{display:grid;grid-template-columns:1fr auto;align-items:end;gap:0 16px;border:1px solid var(--ln);border-top:0;padding:14px 16px 12px;background:var(--bg)}
+.vy .no{font:700 40px/1 var(--cond);letter-spacing:.03em;font-variant-numeric:tabular-nums}
+.vy .cd{font:600 30px/1 var(--cond);color:var(--ac);font-variant-numeric:tabular-nums;text-align:right}
+.vy small{display:block;font:500 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mu);margin-bottom:4px}
+.vy .ft{grid-column:1/-1;margin-top:10px;display:flex;flex-wrap:wrap;gap:4px 24px;font-size:11px;color:var(--mu)}.vy .ft b{color:var(--fg);font-weight:500}
+
+/* berths */
+.berths{display:grid;grid-template-columns:repeat(5,1fr);border-left:1px solid var(--ln);border-top:1px solid var(--ln)}
+.bt{position:relative;background:transparent;color:var(--fg);border:0;border-right:1px solid var(--ln);border-bottom:1px solid var(--ln);height:auto;min-height:92px;padding:10px;text-align:left;text-transform:none;letter-spacing:0;font:500 12px var(--mono);display:flex;flex-direction:column;justify-content:space-between;gap:4px;min-width:0}
+.bt:hover{background:var(--pn);color:var(--fg);border-color:var(--ln)}
+.bt .hd{display:flex;justify-content:space-between;align-items:center;gap:4px}
+.bt em{font:600 16px var(--cond);font-style:normal;letter-spacing:.06em;color:var(--mu)}
+.bt .p{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.bt .p.z{color:var(--ln2)}
+.bt .d{position:absolute;left:0;bottom:0;height:4px;background:var(--ac)}
+.bt.off{background:var(--pn)}
+.bt.on{box-shadow:inset 0 0 0 2px var(--ac)}.bt.on .d{left:4px;bottom:4px;height:3px;max-width:calc(100% - 8px)}.bt.on em{color:var(--ac)}
+.bt.mine:after{content:"";position:absolute;top:0;right:0;border-style:solid;border-width:0 12px 12px 0;border-color:transparent var(--fg) transparent transparent}
+.berths.mini .bt{min-height:34px;padding:4px 6px;font-size:10px}.berths.mini .bt em{font-size:12px}.berths.mini .bt .p,.berths.mini .bt .tg{display:none}
+.binfo{border:1px solid var(--ln);border-top:0;padding:12px 14px;font-size:12px;color:var(--mu);display:flex;flex-wrap:wrap;gap:6px 24px}
+.binfo b{color:var(--fg);font-weight:500}
+.lg{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:11px;color:var(--mu);padding:8px 0}
+
+/* express seats */
+.seats{display:grid;grid-template-columns:repeat(20,1fr);gap:3px;margin:10px 0 4px}
+.seats i{height:16px;border:1px solid var(--ln2)}
+.seats i.s{background:var(--ac);border-color:var(--ac)}.seats i.m{background:var(--fg);border-color:var(--fg)}
+
+.note{border-left:3px solid var(--ac);padding:8px 12px;background:var(--pn);font-size:12px;color:var(--mu);margin-top:12px}
+.empty{border:1px solid var(--ln);border-top:0;padding:18px 14px;color:var(--mu)}
+.bar2{display:flex;gap:8px;justify-content:flex-end;padding:12px 0}
+.foot{margin-top:28px;border-top:1px solid var(--ln);padding-top:12px;color:var(--mu);font-size:11px;display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between}
+.foot a{color:var(--mu)}
+#toast{position:fixed;left:16px;right:16px;bottom:16px;max-width:620px;margin:0 auto;background:var(--pn);border:1px solid var(--ln2);border-left:3px solid var(--ac);padding:10px 14px;font-size:12px;display:none;z-index:9;overflow-wrap:anywhere}
+#toast.err{border-left-color:var(--bad)}#toast a{color:var(--ac)}
+/* wallet picker */
+.wm{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+.wm .bx{width:100%;max-width:440px;max-height:calc(100vh - 32px);overflow:auto;background:var(--pn);border:1px solid var(--ln2)}
+.wm .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:16px 16px 12px;border-bottom:1px solid var(--ln)}
+.wm .hd b{display:block;font:600 20px/1.1 var(--cond);letter-spacing:.06em;text-transform:uppercase}.wm .hd small{color:var(--mu);font-size:11px}
+.wm .x{width:36px;height:36px;padding:0;flex:none}
+.wm .nt{margin:12px 16px 0;padding:10px 12px;border:1px solid var(--ln);border-left:3px solid var(--ac);color:var(--mu);font-size:12px;line-height:1.5}
+.wm h4{margin:16px 16px 6px;font:500 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}
+.wm .ls{display:flex;flex-direction:column;gap:6px;padding:0 16px 16px}
+.wm .w{display:flex;align-items:center;gap:12px;width:100%;height:52px;padding:0 12px;background:var(--pn2);border:1px solid var(--ln);color:var(--fg);font:600 13px var(--mono);letter-spacing:.02em;text-transform:none;text-decoration:none;cursor:pointer}
+.wm .w:hover{border-color:var(--ac);background:var(--pn2);color:var(--fg)}
+.wm .w img,.wm .w .mo{width:30px;height:30px;flex:none}.wm .w .mo{display:flex;align-items:center;justify-content:center;border:1px solid var(--ln2);font:700 12px var(--cond);letter-spacing:.04em}
+.wm .w .nm{flex:1;text-align:left}.wm .w .st{font:500 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mu)}.wm .w .st.ok{color:var(--ok)}
+
+@media(max-width:1100px){.top{height:auto;flex-wrap:wrap}.brand{height:52px}.tools{height:52px}nav{order:3;width:100%;border-top:1px solid var(--ln);overflow-x:auto}nav a{height:44px;flex:1 0 auto}}
+@media(max-width:900px){.cells{grid-template-columns:repeat(2,1fr)}.sh p{display:none}.cols{grid-template-columns:1fr}}
+@media(max-width:720px){
+ .brand{border-right:0;flex:1 1 auto;min-width:0}nav a{padding:0 10px}
+ .cell b{font-size:24px}.hide-s{display:none}td,th{padding-left:8px;padding-right:8px}
+ .lt,.lt thead,#ledger{display:block;width:100%}.lt thead tr{display:flex;justify-content:space-between;border-bottom:1px solid var(--ln)}.lt th{border:0}
+ #ledger tr{width:100%;display:grid;grid-template-columns:1fr auto;border-bottom:1px solid var(--ln)}#ledger td{border:0}
+ #ledger td:nth-child(2){grid-column:1/-1;grid-row:2;width:auto!important;padding-top:0}.ledh th:nth-child(2){display:none}
+ .step{grid-template-columns:40px 1fr}.step>i{font-size:26px}input{width:130px}input.wide{width:100%}
+ .tools{gap:6px;padding-left:8px}.tools button{height:32px;padding:0 8px;font-size:11px}
+ .acts{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+ .bt{min-height:66px;padding:6px;font-size:10px}.bt em{font-size:13px}.bt .tg{font-size:8px;padding:0 2px}
+ .vy{padding:12px 12px 10px}.vy .no{font-size:30px}.vy .cd{font-size:24px}.vy .ft{gap:2px 14px;font-size:10px}
+ .seats{gap:2px}
+}
+@media(prefers-reduced-motion:no-preference){
+ button{transition:background .12s,color .12s,border-color .12s}
+ .vline span{transition:width 1s linear}
+ .seats i{transition:background .3s,border-color .3s}
+ /* the ship sails: loaded berths flash once when a voyage ends */
+ .berths.dep .bt.full{animation:dep .9s ease-out}
+ @keyframes dep{0%{box-shadow:inset 0 0 0 2px var(--ac);background:var(--pn2)}100%{box-shadow:inset 0 0 0 0 var(--ac)}}
+}
+.cd.soon,.cd.soon *{color:var(--ac)}
+</style>
+</head>
+<body>
+<div class="w">
+<header class="top">
+ <a class="brand" id="home" href="#dock" aria-label="Cargo home"><span class="mk" aria-hidden="true"></span><b>CARGO</b></a>
+ <nav id="nav" aria-label="Sections">
+  <a href="#dock" data-t="dock"><i>01</i><span data-i="nDock"></span></a>
+  <a href="#load" data-t="load"><i>02</i><span data-i="nLoad"></span></a>
+  <a href="#ship" data-t="ship"><i>03</i><span data-i="nShip"></span></a>
+  <a href="#express" data-t="express"><i>04</i><span data-i="nExp"></span></a>
+  <a href="#charter" data-t="charter"><i>05</i><span data-i="nChart"></span></a>
+  <a href="#bills" data-t="bills"><i>06</i><span data-i="nBill"></span></a>
+  <a href="#reserve" data-t="reserve"><i>07</i><span data-i="nRes"></span></a>
+ </nav>
+ <div class="tools">
+  <button class="o" id="theme" aria-label="Theme">◐</button>
+  <button class="o" id="lang">中文</button>
+  <button id="conn" data-i="connect"></button>
+ </div>
+</header>
+<div class="strip" id="strip"></div>
+<div class="vline" aria-hidden="true"><span id="vline"></span></div>
+<div class="empty" id="nodeploy" hidden></div>
+
+<!-- 01 DOCK -->
+<div id="v-dock">
+<section class="sec">
+ <div class="sh"><i>01</i><h2 data-i="manifest"></h2><p data-i="manifestS"></p></div>
+ <div class="vy" id="vyDock"></div>
+ <div class="cells" id="cells"></div>
+ <div class="gauge" id="gauge"></div>
+</section>
+<section class="sec">
+ <div class="sh"><i>02</i><h2 data-i="ledger"></h2><p data-i="ledgerS"></p></div>
+ <table class="lt"><thead class="ledh"><tr><th data-i="flow"></th><th data-i="split"></th><th class="n" data-i="total"></th></tr></thead><tbody id="ledger"></tbody></table>
+</section>
+<section class="sec"><details class="adv">
+ <summary class="sh"><i>03</i><h2 data-i="keeper"></h2><p data-i="keeperS"></p><span class="tg2" aria-hidden="true"></span></summary>
+ <table><thead><tr><th data-i="call"></th><th class="hide-s" data-i="does"></th><th class="n" data-i="waiting"></th><th class="n"></th></tr></thead><tbody id="keep"></tbody></table>
+</details>
+</section>
+</div>
+
+<!-- 02 LOAD -->
+<div id="v-load" hidden>
+<section class="sec">
+ <div class="sh"><i>01</i><h2 data-i="loadT"></h2><p id="loadS"></p></div>
+ <div class="cols">
+  <div>
+   <div class="step" id="st1"><i>01</i><div><h3 data-i="m1"></h3><p data-i="m1s"></p>
+    <div class="fr"><label class="f"><span data-i="qty"></span><input id="qty" type="number" min="1" step="1" value="50" inputmode="numeric"></label><button id="bMint" data-i="m1b"></button></div>
+    <div class="rd" id="mCost"></div></div></div>
+   <div class="step" id="st2"><i>02</i><div><h3 data-i="m2"></h3><p data-i="m2s"></p>
+    <div class="fr"><label class="f"><span data-i="gates"></span><input id="gates" type="number" min="1" step="1" value="50" inputmode="numeric"></label><button id="bTape" data-i="m2b"></button></div>
+    <div class="rd" id="tCost"></div></div></div>
+   <div class="step" id="stD"><i>+</i><div><h3 data-i="dT"></h3><p data-i="dS"></p>
+    <div class="fr"><label class="f"><span data-i="cid"></span><input id="dcid" type="number" min="0" step="1" placeholder="#" inputmode="numeric"></label>
+     <label class="f"><span data-i="job"></span><select id="job"></select></label><button id="bCert" data-i="dB"></button></div>
+    <div class="rd" id="dInfo"></div>
+    <div class="tw" style="margin-top:12px"><table><thead><tr><th data-i="job"></th><th class="n" data-i="jIO"></th><th class="n" data-i="jK"></th><th class="n" data-i="jBest"></th><th class="n" data-i="status"></th></tr></thead><tbody id="jobs"></tbody></table></div></div></div>
+   <div class="step" id="st3"><i>03</i><div><h3 data-i="m3"></h3><p data-i="m3s"></p>
+    <div class="fr"><label class="f"><span data-i="cid"></span><input id="cid" type="number" min="0" step="1" placeholder="#" inputmode="numeric"></label>
+     <label class="f"><span data-i="cpuL"></span><input id="cpuA" class="wide" type="text" spellcheck="false" autocomplete="off"></label><button id="bStake" data-i="m3b"></button></div>
+    <div class="rd" id="sInfo"></div>
+    <div class="berths mini" id="miniBerths" style="margin-top:12px;max-width:360px"></div></div></div>
+  </div>
+  <div>
+   <div class="side" style="border-top:1px solid var(--ln);margin-top:16px" id="hold"></div>
+   <div class="note" data-i="loadNote"></div>
+  </div>
+ </div>
+</section>
+</div>
+
+<!-- 03 SHIP -->
+<div id="v-ship" hidden>
+<section class="sec">
+ <div class="sh"><i>01</i><h2 data-i="shipT"></h2><p data-i="shipS"></p></div>
+ <div class="vy" id="vy"></div>
+ <div class="berths" id="berths"></div>
+ <div class="binfo" id="binfo"></div>
+ <div class="lg" id="legend"></div>
+</section>
+<section class="sec">
+ <div class="sh"><i>02</i><h2 data-i="rigsT"></h2><p data-i="rigsS"></p></div>
+ <div class="tw"><table><thead><tr><th data-i="cRig"></th><th class="hide-s" data-i="cCirc"></th><th data-i="cBerth"></th><th class="n" data-i="cPow"></th><th class="n">CARGO</th><th class="n hide-s">OKB</th><th class="n"></th></tr></thead><tbody id="rigs"></tbody></table></div>
+ <div class="bar2"><button id="bClaim" data-i="claimAll"></button></div>
+</section>
+</div>
+
+<!-- 04 EXPRESS -->
+<div id="v-express" hidden>
+<section class="sec">
+ <div class="sh"><i>01</i><h2 data-i="expT"></h2><p data-i="expS"></p></div>
+ <div class="cells" id="xcells"></div>
+ <div class="gauge" id="xgauge"></div>
+</section>
+<div class="cols">
+ <section class="sec">
+  <div class="sh"><i>02</i><h2 data-i="seatT"></h2></div>
+  <div class="step cur"><i>→</i><div><p data-i="seatS"></p>
+   <div class="fr"><label class="f"><span data-i="cRig"></span><select id="xRig"></select></label><button id="bSeat" data-i="seatB" disabled></button></div>
+   <div class="rd" id="xInfo"></div></div></div>
+  <div class="note" data-i="expNote"></div>
+ </section>
+ <section class="sec">
+  <div class="sh"><i>03</i><h2 data-i="xBlocksT"></h2></div>
+  <table><thead><tr><th data-i="xBlk"></th><th class="n" data-i="xShare"></th><th class="n">CARGO</th></tr></thead><tbody id="xblocks"></tbody></table>
+  <div class="bar2"><button id="bXclaim" data-i="claimAll"></button></div>
+ </section>
+</div>
+</div>
+
+<!-- 05 CHARTER -->
+<div id="v-charter" hidden>
+<section class="sec">
+ <div class="sh"><i>01</i><h2 data-i="chT"></h2><p data-i="chS"></p></div>
+ <div class="cells" id="ccells"></div>
+</section>
+<div class="cols">
+ <section class="sec">
+  <div class="sh"><i>02</i><h2 data-i="chNew"></h2></div>
+  <div class="step cur"><i>→</i><div><p data-i="chNewS"></p>
+   <div class="berths mini" id="chBerths" style="margin-bottom:12px;max-width:360px"></div>
+   <div class="fr"><label class="f"><span data-i="days"></span><input id="chDays" type="number" min="7" max="90" step="1" value="7" inputmode="numeric"></label>
+    <label class="f"><span data-i="token"></span><input id="chTok" class="wide" type="text" spellcheck="false" autocomplete="off" placeholder="0x…"></label>
+    <label class="f"><span data-i="amt2"></span><input id="chAmt" type="number" min="0" step="any" placeholder="0" inputmode="decimal"></label>
+    <button id="bCharter" data-i="chB" disabled></button></div>
+   <div class="rd" id="chInfo"></div></div></div>
+ </section>
+ <section class="sec">
+  <div class="sh"><i>03</i><h2 data-i="credT"></h2></div>
+  <table><thead><tr><th data-i="token"></th><th class="n" data-i="owed"></th><th class="n"></th></tr></thead><tbody id="creds"></tbody></table>
+  <div class="note" data-i="credNote"></div>
+ </section>
+</div>
+<section class="sec">
+ <div class="sh"><i>04</i><h2 data-i="chList"></h2></div>
+ <div class="tw"><table><thead><tr><th>#</th><th data-i="cBerth"></th><th data-i="token"></th><th class="n" data-i="amt2"></th><th class="hide-s" data-i="chBy"></th><th class="n" data-i="status"></th><th class="n"></th></tr></thead><tbody id="charters"></tbody></table></div>
+</section>
+</div>
+
+<!-- 06 BILLS -->
+<div id="v-bills" hidden>
+<section class="sec">
+ <div class="sh"><i>01</i><h2 data-i="saleT"></h2><p data-i="saleS"></p></div>
+ <div class="tw"><table><thead><tr><th data-i="bill"></th><th data-i="cBerth"></th><th class="n" data-i="cPow"></th><th class="n hide-s" data-i="pend"></th><th class="n" data-i="priceO"></th><th class="n hide-s" data-i="feeO"></th><th class="n"></th></tr></thead><tbody id="sale"></tbody></table></div>
+</section>
+<section class="sec">
+ <div class="sh"><i>02</i><h2 data-i="myBills"></h2><p data-i="myBillsS"></p></div>
+ <div class="tw"><table><thead><tr><th data-i="bill"></th><th data-i="cBerth"></th><th class="n" data-i="cPow"></th><th class="n" data-i="listed"></th><th class="n"></th></tr></thead><tbody id="mybills"></tbody></table></div>
+ <div class="note" data-i="billNote"></div>
+</section>
+</div>
+
+<!-- 07 RESERVE -->
+<div id="v-reserve" hidden>
+<section class="sec">
+ <div class="sh"><i>01</i><h2 data-i="resT"></h2><p data-i="resS"></p></div>
+ <div class="cells" id="rcells"></div>
+ <div class="note" data-i="resNote"></div>
+</section>
+<div class="cols">
+ <section class="sec">
+  <div class="sh"><i>02</i><h2 data-i="redT"></h2></div>
+  <div class="step cur"><i>→</i><div><p data-i="redS"></p>
+   <div class="fr"><label class="f"><span data-i="amt"></span><input id="ramt" type="number" min="0" step="any" placeholder="0" inputmode="decimal"></label><button class="o" id="bMax">Max</button><button id="bRedeem" data-i="redB" disabled></button></div>
+   <div class="rd" id="rq"></div></div></div>
+ </section>
+ <section class="sec">
+  <div class="sh"><i>03</i><h2 data-i="pendT"></h2></div>
+  <table><thead><tr><th>OKB</th><th class="n" data-i="status"></th></tr></thead><tbody id="reqs"></tbody></table>
+  <div class="bar2"><button id="bRclaim" data-i="pendB"></button></div>
+ </section>
+</div>
+</div>
+
+<footer class="foot"><span data-i="risk"></span><span id="src"></span></footer>
+</div>
+<div id="toast" role="status"></div>
+<div id="wm" class="wm" hidden role="dialog" aria-modal="true" aria-labelledby="wmT"></div>
+
+<script src="ethers.umd.min.js"></script><!-- ethers 6.13.4, shipped with the page: DeWEB CSP allows on-chain scripts only -->
+<script>
+const E = ethers, Q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
+const RPC = Q.get("rpc") || "https://rpc.xlayer.tech", LOCAL = /^https?:\/\/(127\.0\.0\.1|localhost)/.test(RPC);
+const RPCS = ["https://rpc.xlayer.tech", "https://xlayerrpc.okx.com", "https://xlayer.drpc.org"];
+const MAINNET = {"token":"0x72619E6e288D09d94aB830276D5B3AD3D7227231","dock":"0xFEb6646376087ac01b47d6cbf6597e0403A87b39","miner":"0x98578A7442A2438B6E68500891CCafd70d286FF3","burner":"0xE5506123DE830dCbACCeaEa144B79dB75054473F","cargoPol":"0xa16F7dF8347465EA5eD9765bae92419cdD69e339","bemPol":"0xFd52D644F4Cf1bFa1512fbC9a5B413c48613F083","reserve":"0x44c3DFAB564c2F1b1aaB82679584B3112BA9a46a"};
+const EXPL = "https://www.oklink.com/xlayer";
+// CargoMiner v2 constants (immutable in the contract)
+const BERTHS = 25, SHARES = 29, OFF_BERTH = 19, MOVE_COOLDOWN = 24, VOYAGE = 300, BLOCK = 3600, SEATS = 20, SEATS_PER_WALLET = 2,
+  CHARTER_FEE = 5n * 10n ** 14n, CHARTER_MAX_LIVE = 10, OFFICIAL = 4294967295, XSCAN = 72;
+// beta limit: the page reads at most 400 rigs and 200 charters (load()); page by index before that is reached
+const L = {
+ en:{nDock:"Dock",nLoad:"Load",nShip:"Ship",nExp:"Express",nChart:"Charter",nBill:"Bills",nRes:"Reserve",connect:"Connect",
+  manifest:"Manifest",manifestS:"Read live from the Cargo contracts on X Layer. Nothing here is typed by hand.",
+  price:"Transistor price",perNand:"per NAND",emit:"CARGO per voyage",allShares:"25 berths + Express, every 5 min",power:"Power on board",rigs:"rigs",
+  supply:"CARGO supply",burned:"burned",pxl:"CARGO price",pool:"CARGO-OKB pool spot",share:"Reserve share",perCargo:"OKB per CARGO, changes with supply",
+  resOkb:"Reserve",free:"OKB free to redeem",voyage:"Voyage",next:"next in",blk:"Express block",minted:"Transistors minted",cap:"cap",min5:"5 min",
+  ledger:"Where the OKB goes",ledgerS:"Splits are fixed in immutable contracts. Totals are on-chain counters.",
+  flow:"Flow",split:"Split",total:"Total so far",waitingS:"waiting to sweep",
+  fMint:"Transistor mint",fMintS:"OKB paid to mint NAND on the season processor",fFee:"Dock fee",fFeeS:"5% of circuit value, paid at loading",fPol:"CARGO pool fees",fPolS:"Trading fees from the locked CARGO-OKB pool",
+  fVoy:"Voyage fees",fVoyS:"Berth charters + 1% bill of lading sales",
+  team:"Team",res:"Reserve",bem:"BEM-OKB liquidity, locked",cargoL:"CARGO-OKB liquidity, locked",burn:"Buy & burn CARGO",toRigs:"Paid to rigs",
+  keeper:"Advanced · run it yourself",keeperS:"Optional: you never need this to mint, load or claim. A keeper runs these every 15 min; if it ever stops, anyone can run them here. RUN unlocks when OKB is waiting.",cancel:"Cancelled in wallet",
+  call:"Call",does:"What it does",waiting:"Waiting",run:"Run",
+  kSweep:"Splits mint OKB: team / reserve / BEM / CARGO",kVoy:"Splits voyage fees: BEM / team / burn / reserve",kBem:"Locks waiting OKB into BEM-OKB",kCargo:"Adds OKB to CARGO-OKB, or grows the OKB bid",kHarv:"Collects fees: 70% burn, 30% rigs",kBurn:"Buys CARGO with OKB and burns it",
+  loadT:"Load a circuit",m1:"Mint NAND",m1s:"Mint NAND transistors on the season processor. This is a TapeOut contract; the OKB goes to the Cargo dock.",qty:"Quantity",m1b:"Mint",
+  m2:"Tape out a circuit",m2s:"Burn NAND into one circuit NFT on TapeOut. Each NAND in the circuit adds power.",gates:"NAND in circuit",m2b:"Tape out",
+  m3:"Load on a berth",m3s:"Load the circuit onto the selected berth. You get a bill of lading for it. Pays the 5% dock fee in OKB.",cid:"Circuit ID",cpuL:"Processor (empty = Cargo season)",m3b:"Load",
+  dT:"Proof of design (optional, before loading)",dS:"If your circuit computes a published job exactly (checked on-chain for every input), it earns design power on top of its transistor power. Fewer NAND than the reference = more design power. Fees and burns stay on transistor value.",job:"Job",dB:"Certify",jIO:"In / out",jK:"Reference NAND",jBest:"Record NAND",dNone:"No jobs published yet.",dLive:"live",dFrom:"from",dRetired:"retired",dCert:"Certified",dLoaded:"Already on board: design power counts only when a circuit is loaded. Certify before loading.",dNo:"Not certified yet",dPow:"design power",dNand:"NAND",
+  loadNote:"Official TapeOut circuits load only on berths B20–B25, count at 50% power and get no Y30 OKB. Unloading returns the circuit but not the dock fee or the transistors burned. Season 2+ also burns CARGO worth 20% of circuit value at loading.",
+  cost:"Cost",fee:"Dock fee",pw:"Power",tapeFee:"TapeOut fee",hNand:"Your NAND",hOkb:"OKB",hCargo:"CARGO",hCap:"S1 cap left",hRigs:"Your bills",
+  shipT:"Ship",shipS:"25 berths. Each voyage every berth earns 1/29 of the emission, split by power among the circuits on it. Empty berths earn nothing.",
+  sailing:"Sailing",departs:"Next voyage in",perV:"CARGO / voyage / berth",onboard:"circuits on board",
+  berth:"Berth",onIt:"power on it",yours:"your circuit would get",offOk:"official circuits allowed",chartered:"chartered",extra:"extra",
+  lgOff:"B20–B25: Cargo + official TapeOut circuits",lgCh:"Chartered: extra token reward",lgMine:"Your circuit",
+  rigsT:"Your bills of lading",rigsS:"Claim CARGO + OKB. Move to the selected berth once every 2 h; a move burns CARGO worth 1 h of your share there.",moveQ:"Move burns % CARGO. Continue?",
+  cRig:"Bill",cCirc:"Circuit",cBerth:"Berth",cPow:"Power OKB",claimAll:"Claim all",move:"Move →",unstake:"Unload",
+  unstakeQ:"Unload bill #%? The circuit comes back to your wallet. The dock fee is not refunded and unclaimed rewards are paid first.",noRigs:"Nothing loaded yet. Load a circuit in 02.",
+  movedV:"moved < 2 h ago",offOnly:"official: B20–B25 only",
+  expT:"Express",expS:"4 of the 29 shares go to Express. Seats are sold per 1-hour block, paid in CARGO, and the CARGO is burned.",
+  nextBlk:"Next block",startsIn:"starts in",seatP:"Seat price",burnedS:"CARGO, burned",seatsL:"Seats sold",yourSeats:"your seats",xBud:"Block reward",xBudS:"CARGO for all seats",
+  seatT:"Buy a seat",seatS:"Pick one of your loaded circuits. The seat is for the next block, and its power counts in that block's split.",seatB:"Buy seat",
+  expNote:"Price changes per block: ×1.1 when 18+ of 20 seats sold, ×0.9 when fewer than 10, floor 1 CARGO. Max 2 seats per wallet and 1 per circuit per block. The seat stays yours if you unload the circuit.",
+  xBlocksT:"Your Express blocks",xBlk:"Block",xShare:"Your power share",xNone:"No seats in the last 24 blocks.",xNext:"next",xNow:"sailing",xEnd:"ended",
+  soldOut:"sold out",seatLim:"2 seats used",seatUsed:"this circuit has a seat",lowCargo:"not enough CARGO",noBills:"Load a circuit first",estX:"est. reward at current seats",
+  chT:"Charter",chS:"Projects charter a berth and stream their own token to the circuits on it, on top of the normal CARGO share.",
+  chNow:"Chartered now",ofMax:"of 10 max",chFee:"Charter fee",perBV:"OKB per berth per voyage",chMin:"Length",chMinS:"7 to 90 days (2,016–25,920 voyages)",
+  vfees:"Voyage fees",vfeesS:"waiting to sweep",
+  chNew:"Charter a berth",chNewS:"Select a free berth. The fee is paid up front in OKB and not refunded. The token amount streams evenly over the charter.",
+  days:"Days",token:"Token",amt2:"Amount",chB:"Charter",freeB:"free",busyB:"chartered until %",
+  credT:"Your token credits",owed:"Claimable",claimB:"Claim",credNone:"No token credits.",
+  credNote:"Charter tokens are credited when you claim, move or unload a bill on that berth. Charterers: tokens streamed while the berth was empty come back after the charter ends (Reclaim).",
+  chList:"Charters",chBy:"Charterer",live:"Live",ended:"ended",reclaim:"Reclaim",chNone:"No charters yet.",
+  saleT:"Bills for sale",saleS:"A bill of lading is a loaded circuit. Buying it moves the bill and its future rewards to you; it stays on the same berth.",
+  bill:"Bill",pend:"Seller's pending",priceO:"Price OKB",feeO:"Fee 1%",buyB:"Buy",saleNone:"No bills listed.",
+  myBills:"List your bills",myBillsS:"Set a price in OKB. 0 or Delist removes the listing.",listed:"Listed at",listB:"List",minList:"Minimum price % OKB (1% of circuit power)",delist:"Delist",
+  billNote:"Fee = 1% of the higher of price and circuit power, to voyage fees. Pending rewards are paid to the seller at the sale. Bills move only through this market. Season-1 wallet cap applies to the buyer.",
+  resT:"Reserve",resS:"10% of mint OKB is held here. Any holder can redeem CARGO for a pro-rata share.",
+  resNote:"Reserve share = free reserve OKB / (CARGO supply + unclaimed). It moves as supply grows; it is not a fixed floor or a price promise. Redeem burns your CARGO; 1% stays in the reserve and the OKB is paid after 24 h.",
+  supU:"supply + unclaimed",yourC:"Your CARGO",redT:"Redeem",redS:"Burn CARGO now, claim OKB after the 24 h cool-down.",amt:"CARGO amount",redB:"Redeem",
+  get:"You get",pendT:"Pending",status:"Status",pendB:"Claim ready OKB",ready:"Ready",inH:"in % h",none:"Nothing pending.",
+  chain:"X Layer",block:"Block",
+  ndT:"Contracts not deployed yet. This page fills in once the addresses are published.",rpcBusy:"X Layer RPC is busy. Retrying…",
+  needConn:"Connect a wallet first",sent:"Sent",done:"Confirmed",fail:"Failed",noWallet:"No browser wallet found. Open this page in OKX Wallet or MetaMask.",wT:"Connect wallet",wS:"Connect to X Layer",wNone:"No installed wallet detected. Pick one below: on a phone it opens this page inside the wallet app; on desktop it opens the official install page.",wDet:"Detected",wOth:"Other supported wallets",wOpen:"Open in app",wInst:"Install",wReady:"Ready",wClose:"Close",
+  notOwner:"not your circuit",staked:"already loaded",notCpu:"not a Cargo or official processor",
+  risk:"Experimental, unaudited. Cargo contracts are not upgradable; admin changes wait 48h. TapeOut circuit contracts are upgradable by the TapeOut team. Use only what you can lose.",src:"Source"},
+ zh:{nDock:"码头",nLoad:"装货",nShip:"货轮",nExp:"快线",nChart:"包租",nBill:"提单",nRes:"储备",connect:"连接",
+  manifest:"舱单",manifestS:"实时读取自 X Layer 上的 Cargo 合约，没有手填数字。",
+  price:"晶体管价格",perNand:"每个 NAND",emit:"每航次 CARGO",allShares:"25 个泊位 + 快线，每 5 分钟",power:"在船算力",rigs:"份提单",
+  supply:"CARGO 供应量",burned:"已销毁",pxl:"CARGO 价格",pool:"CARGO-OKB 池现价",share:"储备份额",perCargo:"每 CARGO 的 OKB，随供应量变化",
+  resOkb:"储备",free:"可赎回 OKB",voyage:"航次",next:"距下一航次",blk:"快线时段",minted:"已铸造晶体管",cap:"上限",min5:"5 分钟",
+  ledger:"OKB 去向",ledgerS:"分配比例写死在不可升级合约中；累计数为链上计数器。",
+  flow:"资金流",split:"分配",total:"累计",waitingS:"待分配",
+  fMint:"晶体管铸造",fMintS:"在赛季处理器上铸造 NAND 支付的 OKB",fFee:"码头费",fFeeS:"电路价值的 5%，装货时支付",fPol:"CARGO 池手续费",fPolS:"锁定的 CARGO-OKB 池交易手续费",
+  fVoy:"航运费",fVoyS:"泊位包租费 + 提单成交 1% 手续费",
+  team:"团队",res:"储备",bem:"BEM-OKB 流动性（锁定）",cargoL:"CARGO-OKB 流动性（锁定）",burn:"回购销毁 CARGO",toRigs:"分给在船电路",
+  keeper:"高级 · 自己执行",keeperS:"可选：铸造、装载、领取都不需要操作这里。机器人每 15 分钟自动执行；若它停止，任何人都可在此执行。有 OKB 待处理时 RUN 才可点击。",cancel:"已在钱包中取消",
+  call:"调用",does:"作用",waiting:"待处理",run:"执行",
+  kSweep:"分配铸造 OKB：团队 / 储备 / BEM / CARGO",kVoy:"分配航运费：BEM / 团队 / 销毁 / 储备",kBem:"把待用 OKB 锁入 BEM-OKB",kCargo:"向 CARGO-OKB 添加 OKB，或加厚 OKB 买墙",kHarv:"收取手续费：70% 销毁，30% 给在船电路",kBurn:"用 OKB 买入 CARGO 并销毁",
+  loadT:"装载电路",m1:"铸造 NAND",m1s:"在赛季处理器上铸造 NAND 晶体管。这是 TapeOut 合约，OKB 进入 Cargo 码头。",qty:"数量",m1b:"铸造",
+  m2:"流片电路",m2s:"在 TapeOut 上把 NAND 烧成一个电路 NFT。电路中每个 NAND 都增加算力。",gates:"电路中的 NAND",m2b:"流片",
+  m3:"装上泊位",m3s:"把电路装到所选泊位，并获得一份提单。支付 5% 码头费（OKB）。",cid:"电路 ID",cpuL:"处理器（留空 = Cargo 赛季）",m3b:"装货",
+  dT:"设计证明（可选，装货前）",dS:"如果你的电路对某个公开任务的每个输入都给出完全相同的输出（链上逐一验证），就会在晶体管算力之外获得设计算力。比参考电路用更少的 NAND = 更多设计算力。费用和销毁仍按晶体管价值计算。",job:"任务",dB:"认证",jIO:"输入 / 输出",jK:"参考 NAND",jBest:"纪录 NAND",dNone:"尚未发布任务。",dLive:"生效",dFrom:"生效于",dRetired:"已停用",dCert:"已认证",dLoaded:"已在船上：设计算力只在装货时计入。请先认证再装货。",dNo:"尚未认证",dPow:"设计算力",dNand:"NAND",
+  loadNote:"TapeOut 官方电路只能装在 B20–B25，算力按 50% 计，且不分 Y30 OKB。卸货会退回电路，但不退码头费，已烧掉的晶体管也不退。第 2 赛季起，装货时还会销毁价值为电路 20% 的 CARGO。",
+  cost:"费用",fee:"码头费",pw:"算力",tapeFee:"TapeOut 费用",hNand:"你的 NAND",hOkb:"OKB",hCargo:"CARGO",hCap:"S1 剩余上限",hRigs:"你的提单",
+  shipT:"货轮",shipS:"共 25 个泊位。每个航次每个泊位获得排放量的 1/29，按算力分给该泊位上的电路。空泊位不产出。",
+  sailing:"航行中",departs:"距下一航次",perV:"CARGO / 航次 / 泊位",onboard:"份提单在船",
+  berth:"泊位",onIt:"泊位算力",yours:"你的电路预计获得",offOk:"可装官方电路",chartered:"已包租",extra:"额外",
+  lgOff:"B20–B25：Cargo 电路 + TapeOut 官方电路",lgCh:"已包租：额外代币奖励",lgMine:"你的电路",
+  rigsT:"我的提单",rigsS:"领取 CARGO + OKB。每 2 小时可移到所选泊位一次；移动会销毁相当于你在新泊位 1 小时份额的 CARGO。",moveQ:"移动将销毁 % CARGO，继续吗？",
+  cRig:"提单",cCirc:"电路",cBerth:"泊位",cPow:"算力 OKB",claimAll:"全部领取",move:"移到 →",unstake:"卸货",
+  unstakeQ:"卸下提单 #%？电路会退回你的钱包。码头费不退，未领取的奖励会先发放。",noRigs:"还没有装货。请在 02 装载电路。",
+  movedV:"2 小时内已移动",offOnly:"官方电路：仅限 B20–B25",
+  expT:"快线",expS:"29 份中有 4 份归快线。座位按 1 小时时段出售，用 CARGO 支付，支付的 CARGO 被销毁。",
+  nextBlk:"下一时段",startsIn:"开始于",seatP:"座位价格",burnedS:"CARGO，销毁",seatsL:"已售座位",yourSeats:"你的座位",xBud:"时段奖励",xBudS:"全部座位共享的 CARGO",
+  seatT:"购买座位",seatS:"选择一份在船的提单。座位属于下一时段，其算力参与该时段的分配。",seatB:"购买座位",
+  expNote:"价格按时段调整：20 个座位售出 18 个及以上则 ×1.1，少于 10 个则 ×0.9，最低 1 CARGO。每个钱包每时段最多 2 个座位，每个电路 1 个。卸货后座位仍归你。",
+  xBlocksT:"我的快线时段",xBlk:"时段",xShare:"你的算力占比",xNone:"最近 24 个时段没有座位。",xNext:"下一时段",xNow:"进行中",xEnd:"已结束",
+  soldOut:"已售罄",seatLim:"已用 2 个座位",seatUsed:"该电路已有座位",lowCargo:"CARGO 余额不足",noBills:"请先装载电路",estX:"按当前座位估算的奖励",
+  chT:"包租",chS:"项目方包租一个泊位，向该泊位上的电路发放自己的代币，在正常 CARGO 份额之外额外获得。",
+  chNow:"当前包租",ofMax:"最多 10 个",chFee:"包租费",perBV:"OKB / 泊位 / 航次",chMin:"期限",chMinS:"7 至 90 天（2,016–25,920 个航次）",
+  vfees:"航运费",vfeesS:"待分配",
+  chNew:"包租泊位",chNewS:"选择一个空闲泊位。包租费用 OKB 预付，不退还。代币数量在包租期内均匀发放。",
+  days:"天数",token:"代币",amt2:"数量",chB:"包租",freeB:"空闲",busyB:"包租至 %",
+  credT:"我的代币奖励",owed:"可领取",claimB:"领取",credNone:"暂无代币奖励。",
+  credNote:"在该泊位领取、移动或卸下提单时，包租代币会记入你的账户。包租方：泊位空置期间发放的代币，在包租结束后可取回（取回）。",
+  chList:"包租记录",chBy:"包租方",live:"进行中",ended:"已结束",reclaim:"取回",chNone:"暂无包租。",
+  saleT:"出售中的提单",saleS:"提单就是一个在船电路。买入后，提单及其之后的奖励归你，仍停在同一泊位。",
+  bill:"提单",pend:"卖方待领",priceO:"价格 OKB",feeO:"手续费 1%",buyB:"买入",saleNone:"暂无挂单。",
+  myBills:"挂出我的提单",myBillsS:"以 OKB 定价。填 0 或点击撤单即取消挂单。",listed:"挂单价",listB:"挂单",minList:"最低价格 % OKB（电路算力的 1%）",delist:"撤单",
+  billNote:"手续费 = 价格与电路算力两者中较高者的 1%，计入航运费。成交时待领奖励发给卖方。提单只能通过此市场转让。买方受第 1 赛季钱包上限约束。",
+  resT:"储备",resS:"铸造 OKB 的 10% 存于此。任何持有人都可按比例赎回 CARGO。",
+  resNote:"储备份额 = 可用储备 OKB / (CARGO 供应量 + 未领取)。随供应量变化，不是固定底价，也不是价格承诺。赎回会销毁你的 CARGO；1% 留在储备中，OKB 在 24 小时后支付。",
+  supU:"供应量 + 未领取",yourC:"你的 CARGO",redT:"赎回",redS:"现在销毁 CARGO，24 小时冷却后领取 OKB。",amt:"CARGO 数量",redB:"赎回",
+  get:"你将获得",pendT:"待支付",status:"状态",pendB:"领取已到期 OKB",ready:"可领取",inH:"% 小时后",none:"暂无待支付。",
+  chain:"X Layer",block:"区块",
+  ndT:"合约尚未部署。地址公布后此页自动显示数据。",rpcBusy:"X Layer 节点繁忙，正在重试…",
+  needConn:"请先连接钱包",sent:"已发送",done:"已确认",fail:"失败",noWallet:"未检测到浏览器钱包。请在 OKX Wallet 或 MetaMask 中打开此页。",wT:"连接钱包",wS:"连接 X Layer",wNone:"暂未检测到已安装的钱包。可从下方选择：手机上会在钱包 App 内打开本页；电脑上会打开官方安装页面。",wDet:"已检测到",wOth:"其他支持的钱包",wOpen:"在 App 中打开",wInst:"安装",wReady:"可连接",wClose:"关闭",
+  notOwner:"不是你的电路",staked:"已装货",notCpu:"不是 Cargo 或官方处理器",
+  risk:"实验性软件，未经审计。Cargo 合约不可升级；管理员变更需等待 48 小时。TapeOut 电路合约可由 TapeOut 团队升级。只投入你能承受损失的金额。",src:"来源"}
+};
+const store = { get: k => { try { return localStorage.getItem(k) } catch (e) { return null } }, set: (k, v) => { try { localStorage.setItem(k, v) } catch (e) {} } };
+let lang = store.get("cargoLang") || (/^zh/i.test(navigator.language) ? "zh" : "en");
+const t = k => L[lang][k] ?? L.en[k] ?? k;
+const theme = v => { document.documentElement.dataset.theme = v; store.set("cargoTheme", v) };
+theme(store.get("cargoTheme") || "dark");
+
+const ERR = ["AlreadyStaked","BadBerth","BadCharter","BadCpu","BadNetlist","BerthChartered","CapExceeded","MoveCooldown","NoBootstrap","NoOracle","NoPower","NotAllowed","NotCargoCpu","NotEnded","NotListed","NotOwner","NotReady","NotWired","Nothing","PoolTaken","PriceMoved","Reentrant","SeatLimit","SeatTaken","SendFailed","SoldOut","Timelocked","TooManyCharters","TooSoon","WalletCap","WrongFee","Zero"].map(e => `error ${e}()`);
+const ABI = {
+ token:["function totalSupply() view returns (uint256)","function totalBurned() view returns (uint256)","function balanceOf(address) view returns (uint256)","function allowance(address,address) view returns (uint256)","function approve(address,uint256) returns (bool)"],
+ erc20:["function symbol() view returns (string)","function decimals() view returns (uint8)","function balanceOf(address) view returns (uint256)","function allowance(address,address) view returns (uint256)","function approve(address,uint256) returns (bool)"],
+ dock:["function seasonCount() view returns (uint256)","function seasons(uint256) view returns (address cpu,address transistors,uint128 price,uint64 cap,uint64 start)","function pending(uint256) view returns (uint256)","function sweep(uint256) returns (uint256)","function bemBps(uint256) pure returns (uint256)","function totalMintOkb() view returns (uint256)","function totalDockFeeOkb() view returns (uint256)",...ERR],
+ miner:["function totalPower() view returns (uint256)","function berthBudget() view returns (uint256)","function voyageNow() view returns (uint256)","function blockNow() view returns (uint256)","function start() view returns (uint256)","function rigCount() view returns (uint256)","function unclaimed() view returns (uint256)",
+  "function walletCapS1() view returns (uint256)","function s1PowerOf(address) view returns (uint256)","function berths(uint256) view returns (uint128 power,uint64 last,uint256 acc)",
+  "function rigs(uint256) view returns (address owner,address cpu,uint64 voyageMoved,uint8 berth,uint32 season,uint32 cIdx,uint256 id,uint256 power,uint256 cargoDebt,uint256 okbDebt,uint256 xDebt,uint256 price)",
+  "function pending(uint256) view returns (uint256,uint256)","function powerOf(address,uint256) view returns (uint256 power,uint256 season)","function dockFeeFor(address,uint256) view returns (uint256)","function rigOf(address,uint256) view returns (uint256)",
+  "function stake(address,uint256,uint8) payable returns (uint256)","function move(uint256,uint8)","function moveFee(uint256,uint8) view returns (uint256)","function claim(uint256[])","function unstake(uint256)",
+  "function seatPrice(uint256) view returns (uint256)","function seatsSold(uint256) view returns (uint256)","function seatsOf(uint256,address) view returns (uint256)","function seatPower(uint256,address) view returns (uint256)","function blockPower(uint256) view returns (uint256)","function seatUsed(uint256,bytes32) view returns (bool)","function expressBudget(uint256) view returns (uint256)",
+  "function buySeat(uint256) returns (uint256)","function claimExpress(uint256[])",
+  "function charter(uint8,uint256,address,uint256) payable returns (uint256)","function reclaimCharter(uint256)","function claimToken(address)","function tokenOwed(address,address) view returns (uint256)","function charteredNow() view returns (uint256)","function chartersCount() view returns (uint256)",
+  "function charters(uint256) view returns (address charterer,address token,uint8 berth,uint64 from,uint64 until,uint64 last,uint256 amount,uint256 acc,uint256 unalloc)",
+  "function list(uint256,uint256)","function buy(uint256,uint8) payable","function voyageFees() view returns (uint256)","function sweepVoyageFees()","function oracle() view returns (address)",...ERR],
+ oracle:["function cargoForOkb(uint256) view returns (uint256)"],
+ design:["function jobCount() view returns (uint256)","function job(uint256) view returns (string name,address refCpu,uint256 refId,uint256 nIn,uint256 nOut,uint256 k,uint256 readyAt,bool retired,uint256 bestC,address bestCpu,uint256 bestId)","function certs(address,uint256) view returns (uint32 job,uint32 c,uint64 units)","function certify(address,uint256,uint256) returns (uint256)","function bonusPower(address,uint256,uint256) view returns (uint256)","error BadJob()","error BadCircuit()","error BadNetlist()","error NotReady()","error WrongOutput(uint256 input)","error NotBetter()"],
+ pol:["function add() returns (uint128)","function addBid() returns (uint128)","function harvest()","function pool() view returns (address)","function token0() view returns (address)","function totalOkbIn() view returns (uint256)","function totalToBurner() view returns (uint256)","function totalToYield() view returns (uint256)",...ERR],
+ burner:["function burn(uint256) returns (uint256)","function totalOkbIn() view returns (uint256)","function totalBurned() view returns (uint256)","function cargoForOkb(uint256) view returns (uint256)",...ERR],
+ reserve:["function floorPerCargo() view returns (uint256)","function freeOkb() view returns (uint256)","function supply() view returns (uint256)","function quote(uint256) view returns (uint256)","function redeem(uint256) returns (uint256)","function claim() returns (uint256)","function pendingCount(address) view returns (uint256)","function requests(address,uint256) view returns (uint128 okb,uint64 readyAt)",...ERR],
+ tr:["function minted() view returns (uint256)","function mint(uint256,uint256) payable","function protocolFee() view returns (uint256)","function balanceOf(address,uint256) view returns (uint256)"],
+ cpu:["function tapeout(bytes,uint32,uint32) payable","function TAPEOUT_FEE() view returns (uint256)","function nextId() view returns (uint256)","function ownerOf(uint256) view returns (address)","function isApprovedForAll(address,address) view returns (bool)","function setApprovalForAll(address,bool)","event Transfer(address indexed from,address indexed to,uint256 indexed tokenId)"],
+ pool:["function slot0() view returns (uint160 sqrtPriceX96,int24,uint16,uint16,uint16,uint8,bool)"]
+};
+const S = { rp: new E.JsonRpcProvider(RPC, undefined, { staticNetwork: true, batchMaxCount: 10 }) /* X Layer RPCs reject batches > 10 */, d: {}, berth: 0, chBerth: null, view: "dock", tok: {} };
+const fmt = (v, n = 4) => { const x = +E.formatEther(v ?? 0n); return x === 0 ? "0" : x < 10 ** -n ? x.toExponential(2) : x.toLocaleString("en-US", { maximumFractionDigits: n }) };
+const fmtU = (v, dec, n = 4) => { const x = +E.formatUnits(v ?? 0n, dec); return x === 0 ? "0" : x < 10 ** -n ? x.toExponential(2) : x.toLocaleString("en-US", { maximumFractionDigits: n }) };
+const num = v => Number(v).toLocaleString("en-US");
+const bn = i => "B" + String(i + 1).padStart(2, "0");
+const sh = a => a.slice(0, 6) + "…" + a.slice(-4);
+const why = e => String(e?.revert?.name || e?.shortMessage || e?.reason || e?.message || e).slice(0, 160);
+const now = () => Date.now() / 1000 + (S.d.skew || 0);
+const mine = a => S.me && a.toLowerCase() === S.me.toLowerCase();
+const mmss = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+const seatKey = (cpu, id) => E.keccak256(E.AbiCoder.defaultAbiCoder().encode(["address", "uint256"], [cpu, id]));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let tt;
+const toast = (m, err) => { const e = $("toast"); e.className = err ? "err" : ""; e.innerHTML = m; e.style.display = "block"; clearTimeout(tt); tt = setTimeout(() => e.style.display = "none", 7000) };
+const VIEWS = ["dock", "load", "ship", "express", "charter", "bills", "reserve"];
+
+function i18n() {
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  document.querySelectorAll("[data-i]").forEach(e => e.textContent = t(e.dataset.i));
+  $("lang").textContent = lang === "zh" ? "EN" : "中文";
+  $("cpuA").placeholder = S.d.season ? S.d.season.cpu : "0x…";
+  if (S.me) $("conn").textContent = sh(S.me);
+  if (S.A) render();
+}
+function show(v) {
+  if (!VIEWS.includes(v)) v = "dock";
+  S.view = v;
+  document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on", a.dataset.t === v));
+  VIEWS.forEach(x => $("v-" + x).hidden = x !== v || !S.A);
+}
+addEventListener("hashchange", () => show(location.hash.slice(1)));
+$("home").addEventListener("click", () => { if (location.hash === "#dock") show("dock"); scrollTo(0, 0) }); // same hash fires no hashchange
+
+// ---------- wallet + tx ----------
+// Wallets: EIP-6963 announcements + legacy globals. No wallet SDK (DeWEB CSP allows on-chain scripts only).
+const W6963 = new Map();
+addEventListener("eip6963:announceProvider", e => { const d = e.detail; if (d && d.info && d.provider) W6963.set(d.info.rdns || d.info.uuid, d) });
+dispatchEvent(new Event("eip6963:requestProvider"));
+const MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const WALLETS = [ // rdns, name, monogram, legacy global, open-in-app link (phone), install page (desktop)
+  ["com.okex.wallet", "OKX Wallet", "OKX", () => window.okxwallet || (window.ethereum && window.ethereum.isOkxWallet && window.ethereum), u => "https://www.okx.com/download?deeplink=" + encodeURIComponent("okx://wallet/dapp/url?dappUrl=" + encodeURIComponent(u)), "https://web3.okx.com/download"],
+  ["io.metamask", "MetaMask", "MM", () => window.ethereum && window.ethereum.isMetaMask && !window.ethereum.isOkxWallet && window.ethereum, u => "https://metamask.app.link/dapp/" + u.replace(/^https?:\/\//, ""), "https://metamask.io/download/"],
+];
+function detected() { // [{key, name, icon, provider}]
+  const out = [], seen = new Set();
+  for (const [k, d] of W6963) { out.push({ key: k, name: d.info.name, icon: d.info.icon, provider: d.provider }); seen.add(d.provider) }
+  for (const [rdns, name, mo, g] of WALLETS) { const p = g(); if (p && !seen.has(p) && !W6963.has(rdns)) { out.push({ key: rdns, name, mo, provider: p }); seen.add(p) } }
+  if (window.ethereum && !seen.has(window.ethereum)) out.push({ key: "injected", name: "Browser wallet", mo: "W", provider: window.ethereum });
+  return out;
+}
+function walletPicker() {
+  const ds = detected(), dk = new Set(ds.map(d => d.key)), u = location.href.split("#")[0];
+  const ico = d => d.icon && /^data:image\//.test(d.icon) ? `<img src="${esc(d.icon)}" alt="">` : `<span class="mo">${esc(d.mo || d.name.slice(0, 2).toUpperCase())}</span>`;
+  const others = WALLETS.filter(w => !dk.has(w[0]));
+  $("wm").innerHTML = `<div class="bx"><div class="hd"><div><b id="wmT">${t("wT")}</b><small>${t("wS")}</small></div><button class="o x" data-wclose aria-label="${t("wClose")}">✕</button></div>` +
+    (ds.length ? `<h4>${t("wDet")}</h4><div class="ls">${ds.map((d, i) => `<button class="w" data-wpick="${i}">${ico(d)}<span class="nm">${esc(d.name)}</span><span class="st ok">${t("wReady")}</span></button>`).join("")}</div>`
+      : `<div class="nt">${t("wNone")}</div>`) +
+    (others.length ? `<h4>${t("wOth")}</h4><div class="ls">${others.map(w => `<a class="w" href="${esc(MOBILE ? w[4](u) : w[5])}" ${MOBILE ? "" : 'target="_blank" rel="noopener"'}><span class="mo">${w[2]}</span><span class="nm">${w[1]}</span><span class="st">${MOBILE ? t("wOpen") : t("wInst")} ↗</span></a>`).join("")}</div>` : "");
+  S.wlist = ds; $("wm").hidden = false; $("wm").querySelector("[data-wclose]").focus();
+}
+const closeWm = () => { $("wm").hidden = true; $("conn").focus() };
+$("wm").addEventListener("click", e => { if (e.target === $("wm") || e.target.closest("[data-wclose]")) return closeWm(); const b = e.target.closest("[data-wpick]"); if (b) { closeWm(); connect(S.wlist[+b.dataset.wpick].provider).catch(er => toast(esc(why(er)), 1)) } });
+addEventListener("keydown", e => { if (e.key === "Escape" && !$("wm").hidden) closeWm() });
+async function connect(w) {
+  if (!w && LOCAL && !detected().length) { S.signer = await S.rp.getSigner(+Q.get("acct") || 0) }
+  else if (!w) {
+    // wallets can inject after page load: ask again and give them a moment before deciding nothing is installed
+    dispatchEvent(new Event("eip6963:requestProvider")); if (!detected().length) await new Promise(r => setTimeout(r, 600));
+    const ds = detected(); if (ds.length !== 1) return walletPicker(); return connect(ds[0].provider)
+  }
+  else {
+    await w.request({ method: "eth_requestAccounts" });
+    try { await w.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xc4" }] }) }
+    catch (e) { if (e.code !== 4902) throw e; await w.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0xc4", chainName: "X Layer", nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 }, rpcUrls: ["https://rpc.xlayer.tech"], blockExplorerUrls: [EXPL] }] }) }
+    S.signer = await new E.BrowserProvider(w).getSigner();
+    w.on && w.on("accountsChanged", () => location.reload()); w.on && w.on("chainChanged", () => location.reload());
+  }
+  S.me = await S.signer.getAddress(); i18n(); refresh();
+}
+// simulate first, send once; a revert is shown, never retried. Returns the receipt or null.
+async function tx(label, contract, m, args, btn, value) {
+  if (!S.signer) { toast(t("needConn"), 1); return null }
+  btn.disabled = true;
+  const a = value !== undefined ? [...args, { value }] : args;
+  try {
+    const f = contract.connect(S.signer)[m];
+    await f.staticCall(...a);
+    const r = await f(...a);
+    toast(`${t("sent")} · ${label} · <a target="_blank" rel="noopener" href="${EXPL}/tx/${r.hash}">${r.hash.slice(0, 10)}…</a>`);
+    const rc = await r.wait(); toast(`${t("done")} · ${label}`); await refresh(); return rc;
+  } catch (e) {
+    if (e.code === "ACTION_REJECTED" || e.code === 4001 || (e.info && e.info.error && e.info.error.code === 4001)) { toast(`${t("cancel")} · ${label}`); return null }
+    toast(`${t("fail")} · ${label} · ${esc(why(e))}`, 1); return null }
+  finally { btn.disabled = false }
+}
+async function approveCargo(spender, need, btn) {
+  return await S.C.token.allowance(S.me, spender) >= need || !!await tx("approve CARGO", S.C.token, "approve", [spender, need], btn);
+}
+async function tokInfo(a) {
+  const k = a.toLowerCase();
+  if (!S.tok[k]) { const c = S.mk("erc20", a); const [sym, dec] = await Promise.all([c.symbol().catch(() => sh(a)), c.decimals().catch(() => 18n)]); S.tok[k] = { sym: String(sym).slice(0, 12), dec: Number(dec), c } }
+  return S.tok[k];
+}
+
+// ---------- data ----------
+async function boot() {
+  i18n();
+  try { const r = await fetch("cargo-addresses.json", { cache: "no-store" }); if (r.ok) S.A = await r.json() } catch (e) {}
+  if ((!S.A || !S.A.dock) && !LOCAL) S.A = MAINNET; // the json can fail to load (gateway, shields): mainnet addresses are built in
+  // no contract at the address on this RPC (e.g. anvil addresses read from mainnet): say so instead of failing every read.
+  // An RPC error is not "no contract": try the next public node, and retry the whole boot if all of them fail.
+  let code = null;
+  if (S.A && S.A.dock) for (const u of LOCAL ? [RPC] : [RPC, ...RPCS.filter(x => x !== RPC)]) {
+    const p = u === RPC ? S.rp : new E.JsonRpcProvider(u, undefined, { staticNetwork: true, batchMaxCount: 10 });
+    try { code = await p.getCode(S.A.dock); S.rp = p; break } catch (e) {}
+  }
+  if (S.A && S.A.dock && code === null) { $("nodeploy").hidden = false; $("nodeploy").textContent = t("rpcBusy"); return setTimeout(boot, 4000) }
+  $("nodeploy").hidden = true;
+  const nd = !S.A || !S.A.dock || code === "0x";
+  if (nd) { S.A = null; show("dock"); $("nav").hidden = true; $("nodeploy").hidden = false; $("nodeploy").textContent = t("ndT") + " (RPC: " + RPC + ")"; return }
+  show(location.hash.slice(1));
+  const c = (k, a) => new E.Contract(a, ABI[k], S.rp), A = S.A;
+  S.mk = c;
+  S.C = { token: c("token", A.token), dock: c("dock", A.dock), miner: c("miner", A.miner), cargoPol: c("pol", A.cargoPol), bemPol: c("pol", A.bemPol), burner: c("burner", A.burner), reserve: c("reserve", A.reserve) };
+  if (A.design) S.C.design = c("design", A.design); // S2 proof of design
+  S.C.pool = c("pool", await S.C.cargoPol.pool());
+  S.cargoIs0 = (await S.C.cargoPol.token0()).toLowerCase() === A.token.toLowerCase();
+  await refresh(); setInterval(refresh, 30000); setInterval(tick, 1000);
+}
+async function refresh() {
+  if (!S.C || S.busy) return;
+  S.busy = true;
+  try { await load() } finally { S.busy = false }
+  render(); stakeInfo(); seatInfo(); charterInfo();
+}
+async function load() {
+  const C = S.C, d = S.d, p = S.rp, M = C.miner;
+  const n = Number(await C.dock.seasonCount()); d.si = n - 1;
+  [d.season, d.supply, d.burned, d.power, d.budget, d.voyage, d.blockN, d.start, d.share, d.free, d.mintOkb, d.feeOkb, d.slot0,
+   d.cpBurn, d.cpYield, d.rigCount, d.blk, d.wBem, d.wCargo, d.wBurn, d.rsupply, d.capS1, d.vfees, d.chNow, d.chCount, d.berths] = await Promise.all([
+    n ? C.dock.seasons(d.si) : null, C.token.totalSupply(), C.token.totalBurned(), M.totalPower(), M.berthBudget(), M.voyageNow(), M.blockNow(), M.start(),
+    C.reserve.floorPerCargo(), C.reserve.freeOkb(), C.dock.totalMintOkb(), C.dock.totalDockFeeOkb(), C.pool.slot0().catch(() => null),
+    C.cargoPol.totalToBurner(), C.cargoPol.totalToYield(), M.rigCount(), p.getBlock("latest"),
+    p.getBalance(S.A.bemPol), p.getBalance(S.A.cargoPol), p.getBalance(S.A.burner), C.reserve.supply(), M.walletCapS1(), M.voyageFees(), M.charteredNow(), M.chartersCount(),
+    Promise.all([...Array(BERTHS)].map((_, i) => M.berths(i)))]);
+  d.jobs = C.design ? await C.design.jobCount().then(n => Promise.all([...Array(Math.min(64, Number(n)))].map((_, j) => C.design.job(j)))).catch(() => []) : [];
+  // chain clock, not the PC clock (they differ on forks and when the PC clock is off)
+  d.block = d.blk.number; d.skew = d.blk.timestamp - Date.now() / 1000;
+  d.bemBps = n ? Number(await C.dock.bemBps(d.si)) : 3500;
+  if (d.season) {
+    d.tr = S.mk("tr", d.season.transistors); d.cpu = S.mk("cpu", d.season.cpu);
+    [d.wSweep, d.sold, d.pfee, d.tapeFee] = await Promise.all([C.dock.pending(d.si), d.tr.minted().catch(() => null), d.tr.protocolFee(), d.cpu.TAPEOUT_FEE()]);
+  } else d.wSweep = 0n;
+  if (d.slot0) { const sp = d.slot0.sqrtPriceX96, q = 1n << 192n; d.px = S.cargoIs0 ? sp * sp * 10n ** 18n / q : q * 10n ** 18n / (sp * sp) }
+  // Express: the only block on sale is the next one
+  const nb = d.blockN + 1n;
+  [d.xPrice, d.xSold, d.xBudget, d.xPower] = await Promise.all([M.seatPrice(nb), M.seatsSold(nb), M.expressBudget(nb), M.blockPower(nb)]);
+  // beta: rigs and charters are few, read all of them (unloaded rigs have owner 0)
+  const rc = Math.min(Number(d.rigCount), 400), cc = Math.min(Number(d.chCount), 200);
+  const [rigs, chs] = await Promise.all([Promise.all([...Array(rc)].map((_, i) => M.rigs(i))), Promise.all([...Array(cc)].map((_, i) => M.charters(i)))]);
+  d.rigs = rigs.map((r, i) => ({ i, owner: r.owner, cpu: r.cpu, id: r.id, berth: Number(r.berth), season: Number(r.season), power: r.power, moved: r.voyageMoved, price: r.price }))
+    .filter(r => r.owner !== E.ZeroAddress);
+  d.charters = chs.map((c, i) => ({ i, by: c.charterer, token: c.token, berth: Number(c.berth), from: Number(c.from), until: Number(c.until), amount: c.amount, unalloc: c.unalloc }));
+  await Promise.all([...new Set(d.charters.map(c => c.token.toLowerCase()))].map(a => tokInfo(a)));
+  const nw = Number(d.blk.timestamp);
+  d.live = Array(BERTHS).fill(null);
+  d.charters.forEach(c => { if (c.until > nw) d.live[c.berth] = c });
+  const listed = d.rigs.filter(r => r.price > 0n);
+  const lp = await Promise.all(listed.map(r => M.pending(r.i)));
+  listed.forEach((r, k) => r.pc = lp[k][0]);
+  if (S.me) {
+    d.mine = d.rigs.filter(r => mine(r.owner));
+    const pend = await Promise.all(d.mine.map(r => M.pending(r.i)));
+    d.mine.forEach((r, k) => { r.pc = pend[k][0]; r.po = pend[k][1] });
+    const k = Number(await C.reserve.pendingCount(S.me));
+    const blocks = [...Array(XSCAN + 2)].map((_, j) => d.blockN + 1n - BigInt(j)).filter(b => b >= 0n);
+    let sp, owed;
+    [d.cbal, d.okb, d.s1p, d.nand, d.reqs, d.xMine, sp, d.seatUsed, owed] = await Promise.all([C.token.balanceOf(S.me), p.getBalance(S.me), M.s1PowerOf(S.me), d.tr ? d.tr.balanceOf(S.me, 0) : 0n,
+      Promise.all([...Array(k)].map((_, i) => C.reserve.requests(S.me, i))), M.seatsOf(nb, S.me),
+      Promise.all(blocks.map(b => M.seatPower(b, S.me))),
+      Promise.all(d.mine.map(r => M.seatUsed(nb, seatKey(r.cpu, r.id)))),
+      Promise.all(Object.values(S.tok).map(x => M.tokenOwed(S.me, x.c.target)))]);
+    d.xBlocks = [];
+    const sb = blocks.filter((b, j) => sp[j] > 0n);
+    const [bp, bb] = await Promise.all([Promise.all(sb.map(b => M.blockPower(b))), Promise.all(sb.map(b => M.expressBudget(b)))]);
+    sb.forEach((b, j) => d.xBlocks.push({ b, sp: sp[blocks.indexOf(b)], bp: bp[j], est: bb[j] * sp[blocks.indexOf(b)] / bp[j] }));
+    d.mine.forEach((r, j) => r.seated = d.seatUsed[j]);
+    d.owed = Object.values(S.tok).map((x, j) => ({ ...x, a: owed[j] }));
+  }
+}
+
+// ---------- render ----------
+const cell = (lab, code, val, unit, sub, key) => `<div class="cell${key ? " k" : ""}"><small><span>${lab}</span><em>${code}</em></small><b>${val}${unit ? `<u>${unit}</u>` : ""}</b>${sub ? `<s>${sub}</s>` : ""}</div>`;
+// every second: clocks from the chain start time; a voyage ending flashes the loaded berths and reloads
+function tick() {
+  const d = S.d; if (d.start === undefined) return;
+  const st = Number(d.start), el = Math.max(0, now() - st), v = Math.floor(el / VOYAGE), b = Math.floor(el / BLOCK);
+  const vl = VOYAGE - el % VOYAGE, bl = BLOCK - el % BLOCK, f = (el % VOYAGE) / VOYAGE * 100;
+  $("strip").innerHTML = `<span class="live">● <b>Live</b></span><span class="hide-s">${t("chain")} <b>196</b></span><span class="hide-s">${t("block")} <b>${num(d.block)}</b></span>` +
+    `<span>S<b>${d.si + 1}</b></span><span class="vc">${t("voyage")} <b>#${v}</b> · ${t("next")} <b>${mmss(vl)}</b></span><span>${t("blk")} <b>#${b}</b> · <b>${mmss(bl)}</b></span>`;
+  // moving forward animates; a new voyage snaps back (to the quay) without a transition
+  const move = (e, prop, val, n) => { if (n < (+e.dataset.n || 0)) { e.style.transition = "none"; e.style[prop] = val; e.getBoundingClientRect(); e.style.transition = "" } else e.style[prop] = val; e.dataset.n = n };
+  move($("vline"), "width", f + "%", f);
+  document.querySelectorAll(".vcd").forEach(e => { e.textContent = mmss(vl); e.parentNode.classList.toggle("soon", vl <= 10) });
+  document.querySelectorAll(".vno").forEach(e => e.textContent = "#" + v);
+  if ($("xcd")) $("xcd").textContent = mmss(bl);
+  if (S.lastV !== undefined && v !== S.lastV) {
+    const g = $("berths"); g.classList.remove("dep"); g.offsetWidth; g.classList.add("dep");
+    setTimeout(refresh, 1500);
+  }
+  S.lastV = v;
+}
+function render() {
+  if (S.d.block === undefined) return;
+  tick(); renderDock(); renderLoad(); renderDesign(); renderShip(); renderExpress(); renderCharter(); renderBills(); renderReserve();
+  $("src").innerHTML = `${t("src")}: <a target="_blank" rel="noopener" href="${EXPL}/address/${S.A.miner}">CargoMiner ${S.A.miner.slice(0, 8)}…</a>`;
+}
+function renderDock() {
+  const d = S.d, s = d.season;
+  $("vyDock").innerHTML = vyHtml();
+  $("cells").innerHTML = [
+    cell(t("emit"), "A1", fmt(d.budget * BigInt(SHARES), 2), "CARGO", t("allShares"), 1),
+    cell(t("price"), "A2", s ? fmt(s.price, 6) : "—", "OKB", t("perNand")),
+    cell(t("power"), "A3", fmt(d.power, 3), "OKB", `${num(d.rigs.length)} ${t("rigs")}`),
+    cell(t("share"), "A4", fmt(d.share, 8), "OKB", t("perCargo"), 1),
+    cell(t("supply"), "B1", fmt(d.supply, 0), "", `${t("burned")} ${fmt(d.burned, 0)}`),
+    cell(t("pxl"), "B2", d.px ? fmt(d.px, 8) : "—", "OKB", t("pool")),
+    cell(t("resOkb"), "B3", fmt(d.free, 4), "OKB", t("free")),
+    cell(t("voyage"), "B4", "#" + d.voyage, "", t("min5")),
+  ].join("");
+  if (s) {
+    const cap = Number(s.cap), sold = d.sold == null ? null : Number(d.sold), w = sold == null ? 0 : Math.min(100, sold / cap * 100);
+    $("gauge").innerHTML = `<div class="t"><span>${t("minted")} · S${d.si + 1}</span><span><b>${sold == null ? "—" : num(sold)}</b> / ${num(cap)} ${t("cap")}</span></div><div class="track"><span style="width:${w}%"></span></div>`;
+  }
+  const cp = 10000 - 2000 - d.bemBps;
+  const row = (ttl, sub, total, parts, tsub) => `<tr><td><div class="ttl">${ttl}</div><div class="sub">${sub}</div></td><td style="width:52%">
+    <div class="split">${parts.map(([w, c]) => `<span class="${c}" style="width:${w / 100}%"></span>`).join("")}</div>
+    <div class="key">${parts.map(([w, c, l]) => `<span><b class="${c}"></b>${l} <em>${w / 100}%</em></span>`).join("")}</div></td>
+    <td class="n"><span class="tot">${fmt(total)}<u>OKB</u></span>${tsub ? `<div class="sub">${tsub}</div>` : ""}</td></tr>`;
+  $("ledger").innerHTML =
+    row(t("fMint"), t("fMintS"), d.mintOkb, [[1000, "c-team", t("team")], [1000, "c-res", t("res")], [d.bemBps, "c-bem", t("bem")], [cp, "c-cargo", t("cargoL")]]) +
+    row(t("fFee"), t("fFeeS"), d.feeOkb, [[4500, "c-burn", t("burn")], [4500, "c-bem", t("bem")], [1000, "c-team", t("team")]]) +
+    row(t("fVoy"), t("fVoyS"), d.vfees, [[3500, "c-bem", t("bem")], [3500, "c-team", t("team")], [1500, "c-burn", t("burn")], [1500, "c-res", t("res")]], t("waitingS")) +
+    row(t("fPol"), t("fPolS"), d.cpBurn + d.cpYield, [[7000, "c-burn", t("burn")], [3000, "c-rigs", t("toRigs")]]);
+  const k = (id, fn, does, w) => `<tr><td class="kc">${fn}</td><td class="hide-s sub">${does}</td>
+    <td class="n ${w != null && w > 0n ? "due" : "idle"}">${w == null ? "—" : fmt(w) + " OKB"}</td><td class="n"><button class="o" data-k="${id}" ${w === 0n ? "disabled" : ""}>${t("run")}</button></td></tr>`;
+  $("keep").innerHTML =
+    k("sweep", `dock.sweep<i>(${d.si})</i>`, t("kSweep"), d.wSweep) + k("voy", "miner.sweepVoyageFees<i>()</i>", t("kVoy"), d.vfees) + k("bem", "bemPol.add<i>()</i>", t("kBem"), d.wBem) +
+    k("cargo", "cargoPol.add<i>()</i> / addBid<i>()</i>", t("kCargo"), d.wCargo) + k("harvest", "pol.harvest<i>()</i> ×2", t("kHarv"), null) +
+    k("burn", "burner.burn<i>(0)</i>", t("kBurn"), d.wBurn);
+}
+function berthsHtml(sel, attr) {
+  const d = S.d, max = d.berths.reduce((m, x) => x.power > m ? x.power : m, 0n), my = new Set((d.mine || []).map(r => r.berth));
+  return d.berths.map((x, i) => {
+    const w = max > 0n ? Number(x.power * 100n / max) : 0, ch = d.live[i], on = i === sel;
+    const tags = (i >= OFF_BERTH ? `<span class="tg" title="${t("offOk")}">TO</span>` : "") + (ch ? `<span class="tg c" title="${t("chartered")}">${esc(S.tok[ch.token.toLowerCase()]?.sym || "+")}</span>` : "");
+    return `<button class="bt${on ? " on" : ""}${my.has(i) ? " mine" : ""}${i >= OFF_BERTH ? " off" : ""}${x.power > 0n ? " full" : ""}" ${attr}="${i}" aria-pressed="${on}" aria-label="${t("berth")} ${bn(i)}">
+      <span class="hd"><em>${bn(i)}</em><span>${tags}</span></span><span class="p${x.power === 0n ? " z" : ""}">${x.power === 0n ? "0" : fmt(x.power, 3)}</span>${w ? `<span class="d" style="width:${w}%"></span>` : ""}</button>`;
+  }).join("");
+}
+function renderLoad() {
+  const d = S.d, s = d.season; if (!s) return;
+  $("loadS").textContent = `S${d.si + 1} · ${fmt(s.price, 6)} OKB / NAND`;
+  const q = BigInt(Math.max(0, parseInt($("qty").value) || 0));
+  $("mCost").innerHTML = `${t("cost")}: <b>${fmt(s.price * q + d.pfee, 6)} OKB</b> = ${num(q)} × ${fmt(s.price, 6)} + TapeOut ${fmt(d.pfee, 5)}`;
+  const g = BigInt(Math.max(0, parseInt($("gates").value) || 0));
+  $("tCost").innerHTML = `${t("tapeFee")}: <b>${fmt(d.tapeFee, 5)} OKB</b> · ${t("pw")} ≈ <b>${fmt(g * s.price, 4)} OKB</b>`;
+  // highlight the next step the user can take
+  const nand = d.nand ?? 0n, cur = $("cid").value ? 3 : nand > 0n ? 2 : 1;
+  [1, 2, 3].forEach(i => $("st" + i).classList.toggle("cur", i === cur));
+  $("miniBerths").innerHTML = berthsHtml(S.berth, "data-berth");
+  const r = (k, v) => `<div class="r"><span>${t(k)}</span><b>${v}</b></div>`;
+  $("hold").innerHTML = S.me ? r("hNand", num(nand)) + r("hOkb", fmt(d.okb)) + r("hCargo", fmt(d.cbal, 2)) +
+    (d.si === 0 && d.capS1 ? r("hCap", fmt(d.capS1 - (d.s1p ?? 0n), 4) + " OKB") : "") + r("hRigs", (d.mine || []).length)
+    : `<div class="r"><span>${t("needConn")}</span></div>`;
+}
+const cpuOf = () => { const a = $("cpuA").value.trim(); return E.isAddress(a) ? E.getAddress(a) : S.d.season.cpu };
+function renderDesign() {
+  const d = S.d, jobs = d.jobs || [], now = Number(d.blk.timestamp); // chain time
+  $("stD").hidden = !S.C.design;
+  const sel = $("job"), cur = sel.value;
+  sel.innerHTML = jobs.map((j, i) => `<option value="${i}">${esc(j.name)}</option>`).join("");
+  if (cur !== "" && +cur < jobs.length) sel.value = cur;
+  $("jobs").innerHTML = jobs.length ? jobs.map(j => {
+    const st = j.retired ? t("dRetired") : Number(j.readyAt) > now ? `${t("dFrom")} ${new Date(Number(j.readyAt) * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC` : t("dLive");
+    return `<tr><td>${esc(j.name)}</td><td class="n">${j.nIn} / ${j.nOut}</td><td class="n">${j.k}</td><td class="n">${j.bestC > 0n ? j.bestC : "—"}</td><td class="n">${st}</td></tr>`;
+  }).join("") : `<tr><td colspan="5" class="sub">${t("dNone")}</td></tr>`;
+}
+async function designInfo() {
+  const id = $("dcid").value; if (!S.C || !S.C.design) return;
+  $("bCert").disabled = !id || !(S.d.jobs || []).length;
+  if (!id) { $("dInfo").textContent = ""; return }
+  try {
+    const cpu = cpuOf(), [c, rig] = await Promise.all([S.C.design.certs(cpu, id), S.C.miner.rigOf(cpu, id)]);
+    const warn = rig > 0n ? ` · <span class="badc">${t("dLoaded")}</span>` : ""; // power is fixed at loading (review M1)
+    if (c.job === 0n) { $("dInfo").innerHTML = t("dNo") + warn; return }
+    const [pw] = await S.C.miner.powerOf(cpu, id), bonus = await S.C.design.bonusPower(cpu, id, pw);
+    $("dInfo").innerHTML = `${t("dCert")}: <b>${esc(S.d.jobs[Number(c.job) - 1].name)}</b> · ${c.c} ${t("dNand")} · ${t("dPow")} <b class="okc">+${fmt(bonus, 4)} OKB</b>` + warn;
+  } catch (e) { $("dInfo").innerHTML = `<span class="badc">${esc(why(e))}</span>` }
+}
+async function stakeInfo() {
+  const d = S.d, id = $("cid").value; d.stakeP = null;
+  if (!id || !d.season) { $("sInfo").innerHTML = `${t("berth")} <b>${bn(S.berth)}</b>`; $("bStake").disabled = !id; berthInfo(); return }
+  try {
+    const cpu = cpuOf(), c = S.mk("cpu", cpu), [own, pw, fee, rig] = await Promise.all([c.ownerOf(id), S.C.miner.powerOf(cpu, id), S.C.miner.dockFeeFor(cpu, id), S.C.miner.rigOf(cpu, id)]);
+    const off = Number(pw.season) === OFFICIAL;
+    d.stakeP = pw.power; d.stakeOff = off; d.stakeSeason = Number(pw.season);
+    d.stakeBonus = S.C.design && !off && pw.power > 0n ? await S.C.design.bonusPower(cpu, id, pw.power) : 0n;
+    const bad = pw.power === 0n ? t("notCpu") : rig > 0n ? t("staked") : S.me && !mine(own) ? t("notOwner") : off && S.berth < OFF_BERTH ? t("offOnly") : "";
+    $("sInfo").innerHTML = `${t("berth")} <b>${bn(S.berth)}</b> · ${t("pw")} <b>${fmt(pw.power, 4)} OKB</b>${off ? ' <span class="tg">TO ×50%</span>' : ""}${d.stakeBonus > 0n ? ` + ${t("dPow")} <b class="okc">${fmt(d.stakeBonus, 4)} OKB</b>` : ""} · ${t("fee")} <b>${fmt(fee, 6)} OKB</b>` + (bad ? ` · <span class="badc">${bad}</span>` : "");
+    $("bStake").disabled = !!bad;
+  } catch (e) { $("sInfo").innerHTML = `<span class="badc">${esc(why(e))}</span>`; $("bStake").disabled = true }
+  berthInfo();
+}
+function berthInfo() {
+  const d = S.d, x = d.berths && d.berths[S.berth]; if (!x) return;
+  const ch = d.live[S.berth];
+  let s = `<span>${t("berth")} <b>${bn(S.berth)}</b></span><span>${t("onIt")} <b>${fmt(x.power, 4)} OKB</b></span><span><b>${fmt(d.budget, 4)}</b> ${t("perV")}</span>`;
+  if (S.berth >= OFF_BERTH) s += `<span><span class="tg">TO</span> ${t("offOk")}</span>`;
+  if (ch) { const k = S.tok[ch.token.toLowerCase()]; s += `<span><span class="tg c">${esc(k.sym)}</span> ${t("extra")} <b>${fmtU(ch.amount * BigInt(VOYAGE) / BigInt(ch.until - ch.from), k.dec)}</b> ${esc(k.sym)} / ${t("voyage")}</span>` }
+  const sp = d.stakeP ? d.stakeP + (d.stakeBonus || 0n) : 0n;
+  if (sp) s += `<span>${t("yours")} #${$("cid").value}: <b class="okc">${fmt(d.budget * sp / (x.power + sp), 4)}</b> ${t("perV")}</span>`;
+  $("binfo").innerHTML = s;
+}
+const vyHtml = () => { const d = S.d; return `<div class="no"><small>${t("sailing")} · ${t("voyage")}</small><span class="vno">#${d.voyage}</span></div>
+    <div class="cd"><small>${t("departs")}</small><span class="vcd">--:--</span></div>
+    <div class="ft"><span><b>${fmt(d.budget, 4)}</b> ${t("perV")}</span><span><b>${fmt(d.power, 3)} OKB</b> ${t("power")}</span><span><b>${num(d.rigs.length)}</b> ${t("onboard")}</span></div>` };
+function renderShip() {
+  const d = S.d;
+  $("vy").innerHTML = vyHtml();
+  $("berths").innerHTML = berthsHtml(S.berth, "data-berth"); berthInfo();
+  $("legend").innerHTML = `<span><span class="tg">TO</span> ${t("lgOff")}</span><span><span class="tg c">TKN</span> ${t("lgCh")}</span><span>◥ ${t("lgMine")}</span>`;
+  const ms = d.mine || [];
+  $("rigs").innerHTML = ms.length ? ms.map(r => {
+    const off = r.season === OFFICIAL, cool = Number(d.voyage) < Number(r.moved) + MOVE_COOLDOWN, bad = r.berth === S.berth || cool || (off && S.berth < OFF_BERTH);
+    return `<tr><td class="m">#${r.i}</td><td class="m hide-s">${sh(r.cpu)} · ${r.id}${off ? ' <span class="tg">TO</span>' : ""}</td><td class="m">${bn(r.berth)}</td><td class="n m">${fmt(r.power, 4)}</td>
+    <td class="n m">${fmt(r.pc, 4)}</td><td class="n m hide-s">${off ? "—" : fmt(r.po, 6)}</td>
+    <td class="n m acts"><button class="o x" data-move="${r.i}" ${bad ? "disabled" : ""} title="${cool ? t("movedV") : ""}">${t("move")} ${bn(S.berth)}</button> <button class="o x" data-unstake="${r.i}">${t("unstake")}</button></td></tr>`;
+  }).join("") : `<tr><td colspan="7" class="sub">${S.me ? t("noRigs") : t("needConn")}</td></tr>`;
+  $("bClaim").disabled = !ms.some(r => r.pc > 0n || r.po > 0n);
+}
+function renderExpress() {
+  const d = S.d, sold = Number(d.xSold), my = Number(d.xMine || 0n);
+  $("xcells").innerHTML = cell(t("nextBlk"), "X1", "#" + (d.blockN + 1n), "", `${t("startsIn")} <span id="xcd">--:--</span>`) +
+    cell(t("seatP"), "X2", fmt(d.xPrice, 2), "", t("burnedS"), 1) +
+    cell(t("seatsL"), "X3", `${sold}/${SEATS}`, "", `${t("yourSeats")} ${my}/${SEATS_PER_WALLET}`) +
+    cell(t("xBud"), "X4", fmt(d.xBudget, 2), "CARGO", t("xBudS"), 1);
+  $("xgauge").innerHTML = `<div class="t"><span>${t("seatsL")} · #${d.blockN + 1n}</span><span><b>${sold}</b> / ${SEATS}</span></div>
+    <div class="seats">${[...Array(SEATS)].map((_, i) => `<i class="${i < sold ? (i < my ? "m" : "s") : ""}"></i>`).join("")}</div>`;
+  const sel = $("xRig"), keep = sel.value, ms = d.mine || [];
+  sel.innerHTML = ms.length ? ms.map(r => `<option value="${r.i}">#${r.i} · ${bn(r.berth)} · ${fmt(r.power, 4)} OKB</option>`).join("") : `<option value="">${t("noBills")}</option>`;
+  if (ms.some(r => String(r.i) === keep)) sel.value = keep;
+  const xb = d.xBlocks || [], cur = d.blockN;
+  $("xblocks").innerHTML = xb.length ? xb.map(x => `<tr><td>#${x.b} <span class="sub">${x.b > cur ? t("xNext") : x.b === cur ? t("xNow") : t("xEnd")}</span></td>
+    <td class="n">${(Number(x.sp * 10000n / x.bp) / 100).toFixed(2)}%</td><td class="n ${x.b < cur ? "okc" : ""}">${fmt(x.est, 4)}</td></tr>`).join("")
+    : `<tr><td colspan="3" class="sub">${S.me ? t("xNone") : t("needConn")}</td></tr>`;
+  $("bXclaim").disabled = !xb.some(x => x.b < cur);
+}
+function seatInfo() {
+  const d = S.d, r = (d.mine || []).find(x => String(x.i) === $("xRig").value);
+  if (!S.me) { $("xInfo").textContent = t("needConn"); $("bSeat").disabled = true; return }
+  if (!r) { $("xInfo").textContent = t("noBills"); $("bSeat").disabled = true; return }
+  const bad = Number(d.xSold) >= SEATS ? t("soldOut") : Number(d.xMine) >= SEATS_PER_WALLET ? t("seatLim") : r.seated ? t("seatUsed") : (d.cbal ?? 0n) < d.xPrice ? t("lowCargo") : "";
+  const est = d.xBudget * r.power / (d.xPower + r.power);
+  $("xInfo").innerHTML = `${t("seatP")}: <b>${fmt(d.xPrice, 2)} CARGO</b> · ${t("estX")}: <b class="okc">${fmt(est, 4)} CARGO</b>` + (bad ? ` · <span class="badc">${bad}</span>` : "");
+  $("bSeat").disabled = !!bad;
+}
+function renderCharter() {
+  const d = S.d, nw = now();
+  $("ccells").innerHTML = cell(t("chNow"), "C1", `${num(d.chNow)}`, "", t("ofMax")) + cell(t("chFee"), "C2", fmt(CHARTER_FEE, 4), "", t("perBV"), 1) +
+    cell(t("chMin"), "C3", "7–90", "d", t("chMinS")) + cell(t("vfees"), "C4", fmt(d.vfees, 4), "OKB", t("vfeesS"));
+  if (S.chBerth === null || d.live[S.chBerth]) { const f = d.live.findIndex(x => !x); S.chBerth = f < 0 ? 0 : f }
+  $("chBerths").innerHTML = berthsHtml(S.chBerth, "data-chb");
+  const cs = [...d.charters].reverse();
+  $("charters").innerHTML = cs.length ? cs.map(c => {
+    const k = S.tok[c.token.toLowerCase()], end = c.until <= nw;
+    return `<tr><td>${c.i}</td><td>${bn(c.berth)}</td><td><span class="tg c">${esc(k.sym)}</span></td><td class="n">${fmtU(c.amount, k.dec)}</td><td class="hide-s sub">${sh(c.by)}</td>
+      <td class="n ${end ? "idle" : "okc"}">${end ? t("ended") : t("live") + " · " + t("inH").replace("%", ((c.until - nw) / 3600).toFixed(1))}</td>
+      <td class="n">${end && mine(c.by) ? `<button class="o x" data-reclaim="${c.i}">${t("reclaim")}</button>` : ""}</td></tr>`;
+  }).join("") : `<tr><td colspan="7" class="sub">${t("chNone")}</td></tr>`;
+  const ow = (d.owed || []).filter(x => x.a > 0n);
+  $("creds").innerHTML = ow.length ? ow.map(x => `<tr><td><span class="tg c">${esc(x.sym)}</span> <span class="sub">${sh(x.c.target)}</span></td><td class="n">${fmtU(x.a, x.dec)}</td>
+    <td class="n"><button class="o x" data-ctok="${x.c.target}">${t("claimB")}</button></td></tr>`).join("")
+    : `<tr><td colspan="3" class="sub">${S.me ? t("credNone") : t("needConn")}</td></tr>`;
+}
+async function charterInfo() {
+  const d = S.d; if (!d.berths) return;
+  const days = parseInt($("chDays").value) || 0, v = BigInt(days * 288), tok = $("chTok").value.trim(), amt = $("chAmt").value;
+  let s = `${t("berth")} <b>${bn(S.chBerth)}</b> · ${num(v)} ${t("voyage")} · ${t("chFee")} <b>${fmt(v * CHARTER_FEE, 4)} OKB</b>`, bad = "";
+  if (d.live[S.chBerth]) bad = t("busyB").replace("%", new Date(d.live[S.chBerth].until * 1000).toISOString().slice(0, 16).replace("T", " "));
+  else if (Number(d.chNow) >= CHARTER_MAX_LIVE) bad = "10/10";
+  else if (days < 7 || days > 90) bad = t("chMinS");
+  if (E.isAddress(tok)) {
+    try { const k = await tokInfo(tok); s += ` · <span class="tg c">${esc(k.sym)}</span>`; if (amt && +amt > 0) s += ` · <b>${fmtU(E.parseUnits(amt, k.dec) / (v || 1n), k.dec, 6)}</b> ${esc(k.sym)} / ${t("voyage")}` } catch (e) { bad = bad || esc(why(e)) }
+  }
+  $("chInfo").innerHTML = s + (bad ? ` · <span class="badc">${bad}</span>` : "");
+  $("bCharter").disabled = !!bad || !E.isAddress(tok) || !(+amt > 0);
+}
+function renderBills() {
+  const d = S.d, fee = r => (r.price > r.power ? r.price : r.power) / 100n;
+  const ls = d.rigs.filter(r => r.price > 0n);
+  $("sale").innerHTML = ls.length ? ls.map(r => `<tr><td class="m">#${r.i}${r.season === OFFICIAL ? ' <span class="tg">TO</span>' : ""}<div class="sub">${sh(r.owner)}</div></td><td class="m">${bn(r.berth)}</td><td class="n m">${fmt(r.power, 4)}</td>
+    <td class="n m hide-s">${fmt(r.pc, 2)} CARGO</td><td class="n m"><b>${fmt(r.price, 6)}</b></td><td class="n m hide-s">${fmt(fee(r), 6)}</td>
+    <td class="n m">${mine(r.owner) ? "" : `<button class="x" data-buy="${r.i}">${t("buyB")}</button>`}</td></tr>`).join("")
+    : `<tr><td colspan="7" class="sub">${t("saleNone")}</td></tr>`;
+  const ms = d.mine || [];
+  $("mybills").innerHTML = ms.length ? ms.map(r => `<tr><td class="m">#${r.i}</td><td class="m">${bn(r.berth)}</td><td class="n m">${fmt(r.power, 4)}</td><td class="n m">${r.price > 0n ? fmt(r.price, 6) + " OKB" : "—"}</td>
+    <td class="n m"><div class="fr" style="justify-content:flex-end"><input id="lp${r.i}" type="number" min="0" step="any" placeholder="≥ ${fmt(r.power / 100n, 6)}" title="${t("minList").replace("%", fmt(r.power / 100n, 6))}" inputmode="decimal" style="width:130px;height:30px">
+    <button class="o x" data-list="${r.i}">${t("listB")}</button>${r.price > 0n ? `<button class="o x" data-delist="${r.i}">${t("delist")}</button>` : ""}</div></td></tr>`).join("")
+    : `<tr><td colspan="5" class="sub">${S.me ? t("noRigs") : t("needConn")}</td></tr>`;
+}
+function renderReserve() {
+  const d = S.d, nw = now();
+  $("rcells").innerHTML = cell(t("resOkb"), "R1", fmt(d.free, 4), "OKB", t("free"), 0) + cell(t("supply"), "R2", fmt(d.rsupply, 0), "", t("supU")) +
+    cell(t("share"), "R3", fmt(d.share, 8), "OKB", t("perCargo"), 1) + cell(t("yourC"), "R4", S.me ? fmt(d.cbal, 2) : "—", "", "");
+  const rq = d.reqs || [];
+  $("reqs").innerHTML = rq.length ? rq.map(r => `<tr><td>${fmt(r.okb, 8)}</td><td class="n">${Number(r.readyAt) <= nw ? `<span class="okc">${t("ready")}</span>` : t("inH").replace("%", ((Number(r.readyAt) - nw) / 3600).toFixed(1))}</td></tr>`).join("")
+    : `<tr><td colspan="2" class="sub">${S.me ? t("none") : t("needConn")}</td></tr>`;
+  $("bRclaim").disabled = !rq.some(r => Number(r.readyAt) <= nw);
+}
+async function quote() {
+  const v = $("ramt").value; $("bRedeem").disabled = !v; if (!v || !S.C) { $("rq").textContent = ""; return }
+  try { const q = await S.C.reserve.quote(E.parseEther(v)); $("rq").innerHTML = `${t("get")}: <b>${fmt(q, 8)} OKB</b> · 1% · 24 h`; $("bRedeem").disabled = q === 0n } catch (e) { $("rq").textContent = "" }
+}
+
+// ---------- actions ----------
+document.addEventListener("click", async ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  if (b.id === "lang") { lang = lang === "zh" ? "en" : "zh"; store.set("cargoLang", lang); return i18n() }
+  if (b.id === "theme") return theme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  if (b.id === "conn") return connect().catch(e => toast(esc(why(e)), 1));
+  const C = S.C, d = S.d, M = C && C.miner; if (!C) return;
+  if (b.dataset.berth) { S.berth = +b.dataset.berth; renderLoad(); renderShip(); return stakeInfo() }
+  if (b.dataset.chb) { S.chBerth = +b.dataset.chb; renderCharter(); return charterInfo() }
+  const k = b.dataset.k;
+  if (k === "sweep") return tx("dock.sweep", C.dock, "sweep", [d.si], b);
+  if (k === "voy") return tx("miner.sweepVoyageFees", M, "sweepVoyageFees", [], b);
+  if (k === "bem") return tx("bemPol.add", C.bemPol, "add", [], b);
+  if (k === "cargo") { // add() needs CARGO in the pool; before miners sell, grow the OKB bid instead
+    let m = "add"; try { if (S.signer) await C.cargoPol.connect(S.signer).add.staticCall() } catch (e) { m = "addBid" }
+    return tx("cargoPol." + m, C.cargoPol, m, [], b);
+  }
+  if (k === "harvest") { await tx("bemPol.harvest", C.bemPol, "harvest", [], b); return tx("cargoPol.harvest", C.cargoPol, "harvest", [], b) }
+  if (k === "burn") return tx("burner.burn", C.burner, "burn", [0n], b);
+  if (b.id === "bMint") { const q = BigInt(parseInt($("qty").value) || 0); if (q < 1n) return; return tx(t("m1b"), d.tr, "mint", [0, q], b, d.season.price * q + d.pfee) }
+  if (b.id === "bTape") {
+    const n = parseInt($("gates").value) || 0; if (n < 1) return;
+    // n chained NAND gates, inputs = wire 2 (same netlist as the fork tests): burns n NAND
+    const net = E.concat([...Array(n)].map(() => "0x00000002000002"));
+    const rc = await tx(t("m2b"), d.cpu, "tapeout", [net, 1, 1], b, d.tapeFee);
+    if (rc) {
+      const ev = rc.logs.map(l => { try { return d.cpu.interface.parseLog(l) } catch (e) { return null } }).find(x => x && x.name === "Transfer" && mine(x.args.to));
+      $("cpuA").value = ""; $("cid").value = ev ? ev.args.tokenId.toString() : (await d.cpu.nextId()).toString(); renderLoad(); stakeInfo();
+    }
+    return;
+  }
+  if (b.id === "bCert") {
+    if (!S.signer) return toast(t("needConn"), 1);
+    if (await tx("design.certify", C.design, "certify", [cpuOf(), BigInt($("dcid").value), BigInt($("job").value)], b)) { await refresh(); designInfo() }
+    return;
+  }
+  if (b.id === "bStake") {
+    const id = BigInt($("cid").value), cpu = cpuOf(), c = S.mk("cpu", cpu);
+    if (!S.signer) return toast(t("needConn"), 1);
+    if (!await c.isApprovedForAll(S.me, S.A.miner) && !await tx("approve circuits", c, "setApprovalForAll", [S.A.miner, true], b)) return;
+    if (d.stakeSeason > 0 && !d.stakeOff) { // circuit season 2+: the miner's oracle prices the 20% CARGO burn; +5% margin for the TWAP moving
+      const need = await S.mk("oracle", await M.oracle()).cargoForOkb(d.stakeP * 2000n / 10000n) * 105n / 100n;
+      if (!await approveCargo(S.A.miner, need, b)) return;
+    }
+    if (await tx(t("m3b"), M, "stake", [cpu, id, S.berth], b, await M.dockFeeFor(cpu, id))) { $("cid").value = ""; stakeInfo() }
+    return;
+  }
+  if (b.id === "bClaim") return tx(t("claimAll"), M, "claim", [d.mine.filter(r => r.pc > 0n || r.po > 0n).map(r => r.i)], b);
+  if (b.dataset.move) {
+    const fee = await M.moveFee(+b.dataset.move, S.berth);
+    if (fee > 0n && (!confirm(t("moveQ").replace("%", fmt(fee))) || !await approveCargo(S.A.miner, fee + fee / 10n, b))) return;
+    return tx(t("move") + " " + bn(S.berth), M, "move", [+b.dataset.move, S.berth], b);
+  }
+  if (b.dataset.unstake) { if (!confirm(t("unstakeQ").replace("%", b.dataset.unstake))) return; return tx(t("unstake"), M, "unstake", [+b.dataset.unstake], b) }
+  if (b.id === "bSeat") {
+    const r = +$("xRig").value; if (!S.signer) return toast(t("needConn"), 1);
+    const p = await M.seatPrice(await M.blockNow() + 1n);
+    if (!await approveCargo(S.A.miner, p * 11n / 10n, b)) return; // +10%: the block may flip (price ×1.1) before the tx lands
+    return tx(t("seatB"), M, "buySeat", [r], b);
+  }
+  if (b.id === "bXclaim") return tx(t("claimAll"), M, "claimExpress", [d.xBlocks.filter(x => x.b < d.blockN).map(x => x.b)], b);
+  if (b.id === "bCharter") {
+    if (!S.signer) return toast(t("needConn"), 1);
+    const v = BigInt((parseInt($("chDays").value) || 0) * 288), k = await tokInfo($("chTok").value.trim()), a = E.parseUnits($("chAmt").value, k.dec);
+    if (await k.c.allowance(S.me, S.A.miner) < a && !await tx("approve " + k.sym, k.c, "approve", [S.A.miner, a], b)) return;
+    if (await tx(t("chB") + " " + bn(S.chBerth), M, "charter", [S.chBerth, v, k.c.target, a], b, v * CHARTER_FEE)) { $("chAmt").value = ""; charterInfo() }
+    return;
+  }
+  if (b.dataset.reclaim) return tx(t("reclaim"), M, "reclaimCharter", [+b.dataset.reclaim], b);
+  if (b.dataset.ctok) return tx(t("claimB"), M, "claimToken", [b.dataset.ctok], b);
+  if (b.dataset.buy) { const r = d.rigs.find(x => x.i === +b.dataset.buy); return tx(t("buyB") + " #" + r.i, M, "buy", [r.i, r.berth], b, r.price) }
+  if (b.dataset.list) {
+    const v = $("lp" + b.dataset.list).value, r = d.rigs.find(x => x.i === +b.dataset.list); if (v === "") return;
+    if (+v > 0 && E.parseEther(v) < r.power / 100n) return toast(t("minList").replace("%", fmt(r.power / 100n, 6)), 1); // buy() would revert WrongFee
+    return tx(t("listB") + " #" + b.dataset.list, M, "list", [+b.dataset.list, E.parseEther(v)], b) }
+  if (b.dataset.delist) return tx(t("delist") + " #" + b.dataset.delist, M, "list", [+b.dataset.delist, 0n], b);
+  if (b.id === "bMax") { if (d.cbal) { $("ramt").value = E.formatEther(d.cbal); quote() } return }
+  if (b.id === "bRedeem") {
+    const v = $("ramt").value; if (!v) return; const a = E.parseEther(v);
+    if (!S.signer) return toast(t("needConn"), 1);
+    if (!await approveCargo(S.A.reserve, a, b)) return;
+    if (await tx(t("redB"), C.reserve, "redeem", [a], b)) { $("ramt").value = ""; quote() }
+    return;
+  }
+  if (b.id === "bRclaim") return tx(t("pendB"), C.reserve, "claim", [], b);
+});
+let deb;
+const later = f => { clearTimeout(deb); deb = setTimeout(f, 300) };
+$("cid").addEventListener("input", () => later(() => { renderLoad(); stakeInfo() }));
+$("cpuA").addEventListener("input", () => later(stakeInfo));
+$("dcid").addEventListener("input", () => later(designInfo));
+$("job").addEventListener("change", designInfo);
+$("ramt").addEventListener("input", () => later(quote));
+["chDays", "chTok", "chAmt"].forEach(i => $(i).addEventListener("input", () => later(charterInfo)));
+$("xRig").addEventListener("change", seatInfo);
+$("qty").addEventListener("input", () => { $("gates").value = $("qty").value; S.d.season && renderLoad() });
+$("gates").addEventListener("input", () => S.d.season && renderLoad());
+boot().catch(e => toast(esc(why(e)), 1));
+</script>
+</body>
+</html>
